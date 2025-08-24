@@ -39,7 +39,7 @@ export class RateLimitManager {
     async waitForReset(bucket: string): Promise<void> {
         const waitTime = this.getTimeUntilReset(bucket);
         if (waitTime > 0) {
-            await new Promise(resolve => setTimeout(resolve, waitTime + 100)); // +100ms buffer
+            await new Promise(resolve => setTimeout(resolve, waitTime + 500)); // +100ms buffer
         }
     }
 }

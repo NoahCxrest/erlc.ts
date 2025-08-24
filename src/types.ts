@@ -34,7 +34,7 @@ export interface Player {
     Player: string;
     Permission: 'Normal' | 'Server Administrator' | 'Server Owner' | 'Server Moderator';
     Callsign?: string;
-    Team: string;
+    Team: 'Police' | 'Jail' | 'Sheriff' | 'DOT' | 'Fire' | 'Civilian';
 }
 
 export interface JoinLog {
