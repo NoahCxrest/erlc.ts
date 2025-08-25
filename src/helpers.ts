@@ -128,7 +128,7 @@ export class PRCHelpers {
      * @param {number} [minutes=10] - Minutes to look back.
      * @returns {Promise<JoinLog[]>} Array of join logs.
      */
-    async getRecentJoins(minutes = 10): Promise<JoinLog[]> {
+    async getRecentJoins(minutes: number = 10): Promise<JoinLog[]> {
         const { data: logs } = await this.client.getJoinLogs();
         const cutoff = Date.now() / 1000 - (minutes * 60);
         return logs.filter(log => log.Join && log.Timestamp > cutoff);
@@ -139,7 +139,7 @@ export class PRCHelpers {
      * @param {number} [minutes=10] - Minutes to look back.
      * @returns {Promise<JoinLog[]>} Array of leave logs.
      */
-    async getRecentLeaves(minutes = 10): Promise<JoinLog[]> {
+    async getRecentLeaves(minutes: number = 10): Promise<JoinLog[]> {
         const { data: logs } = await this.client.getJoinLogs();
         const cutoff = Date.now() / 1000 - (minutes * 60);
         return logs.filter(log => !log.Join && log.Timestamp > cutoff);
@@ -151,7 +151,7 @@ export class PRCHelpers {
      * @param {number} [hours=1] - Hours to look back.
      * @returns {Promise<KillLog[]>} Array of kill logs.
      */
-    async getPlayerKills(player: string, hours = 1): Promise<KillLog[]> {
+    async getPlayerKills(player: string, hours: number = 1): Promise<KillLog[]> {
         const { data: logs } = await this.client.getKillLogs();
         const cutoff = Date.now() / 1000 - (hours * 3600);
         return logs.filter(log =>
@@ -181,7 +181,7 @@ export class PRCHelpers {
      * @param {number} [hours=1] - Hours to look back.
      * @returns {Promise<CommandLog[]>} Array of command logs.
      */
-    async getPlayerCommands(player: string, hours = 1): Promise<CommandLog[]> {
+    async getPlayerCommands(player: string, hours: number = 1): Promise<CommandLog[]> {
         const { data: logs } = await this.client.getCommandLogs();
         const cutoff = Date.now() / 1000 - (hours * 3600);
         return logs.filter(log =>
@@ -195,7 +195,7 @@ export class PRCHelpers {
      * @param {number} [hours=1] - Hours to look back.
      * @returns {Promise<ModCall[]>} Array of unanswered mod calls.
      */
-    async getUnansweredModCalls(hours = 1): Promise<ModCall[]> {
+    async getUnansweredModCalls(hours: number = 1): Promise<ModCall[]> {
         const { data: logs } = await this.client.getModCalls();
         const cutoff = Date.now() / 1000 - (hours * 3600);
         return logs.filter(log => !log.Moderator && log.Timestamp > cutoff);
@@ -208,7 +208,7 @@ export class PRCHelpers {
      * @returns {Promise<Player>} The found player.
      * @throws {Error} If player is not found within timeout.
      */
-    async waitForPlayer(nameOrId: string, timeoutMs = 30000): Promise<Player> {
+    async waitForPlayer(nameOrId: string, timeoutMs: number = 30000): Promise<Player> {
         const startTime = Date.now();
 
         while (Date.now() - startTime < timeoutMs) {
@@ -228,7 +228,7 @@ export class PRCHelpers {
      * @returns {Promise<void>}
      * @throws {Error} If count is not reached within timeout.
      */
-    async waitForPlayerCount(count: number, timeoutMs = 60000): Promise<void> {
+    async waitForPlayerCount(count: number, timeoutMs: number = 60000): Promise<void> {
         const startTime = Date.now();
 
         while (Date.now() - startTime < timeoutMs) {

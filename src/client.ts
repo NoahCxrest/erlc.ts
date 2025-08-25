@@ -89,9 +89,9 @@ export class PRCClient {
     method: 'GET' | 'POST',
     endpoint: string,
     body?: any,
-    bucket = 'global',
-    cacheable = false,
-    retryCount = 0
+    bucket: string = 'global',
+    cacheable: boolean = false,
+    retryCount: number = 0
   ): Promise<APIResponse<T>> {
 
     const url = `${this.baseURL}${endpoint}`;
@@ -114,14 +114,14 @@ export class PRCClient {
     }
     const response = await fetch(url, fetchOptions);
 
-  const rateLimitInfo = this.extractRateLimitInfo(response);
+    const rateLimitInfo = this.extractRateLimitInfo(response);
 
 
     if (!response.ok) {
       let errorBody: any = {};
       try {
         errorBody = await response.json();
-      } catch {}
+      } catch { }
       if (
         errorBody &&
         ((errorBody?.code === 4001 || errorBody?.errorCode === 4001)) &&
@@ -150,7 +150,7 @@ export class PRCClient {
       this.cache.set(cacheKey, data);
     }
 
-  return { data, rateLimit: rateLimitInfo as RateLimitInfo };
+    return { data, rateLimit: rateLimitInfo as RateLimitInfo };
   }
 
   /**
