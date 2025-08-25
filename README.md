@@ -1,4 +1,4 @@
-# erlc.ts — PRC API Client
+# erlc.ts — PRC API Client [![CodeFactor](https://www.codefactor.io/repository/github/noahcxrest/erlc.ts/badge)](https://www.codefactor.io/repository/github/noahcxrest/erlc.ts)
 
 > A minimal, type-safe TypeScript client for the Police Roleplay Community (PRC) API.
 > No dependencies. No nonsense.
