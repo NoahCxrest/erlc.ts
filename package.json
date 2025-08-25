@@ -1,6 +1,6 @@
 {
   "name": "erlc.ts",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Clean and typesafe PRC API client for TypeScript",
   "main": "dist/index.js",
   "module": "dist/index.js",
