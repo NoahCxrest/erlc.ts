@@ -1,177 +1,209 @@
-
 # erlc.ts — PRC API Client
 
-A minimal, type-safe TypeScript client for the Police Roleplay Community (PRC) API.
-No dependencies, no nonsense.
-
+> A minimal, type-safe TypeScript client for the Police Roleplay Community (PRC) API.
+> No dependencies. No nonsense.
 
 ---
 
-## Installation
+## 📦 Installation
 
 ```bash
 npm install erlc.ts
 ```
 
+---
 
-## Usage
+## 🚀 Quick Start
 
-### Basic Example
-
-```typescript
+```ts
 import { PRCClient } from 'erlc.ts';
 
 const client = new PRCClient({ serverKey: 'your-server-key' });
+
 const { data: status } = await client.getServerStatus();
 console.log(status);
 
 await client.executeCommand(':h Check out Melonly!');
 ```
 
-### Error Handling
+---
 
-All API methods can throw a `PRCAPIError` if something goes wrong (e.g., invalid key, rate limit, server offline). Wrap your calls in a try/catch block:
+## 📚 Table of Contents
 
-```typescript
-import { PRCClient, PRCAPIError } from 'erlc.ts';
+* [Features](#-features)
+* [Usage](#-usage)
+
+  * [Basic Example](#basic-example)
+  * [Error Handling](#error-handling)
+  * [Cache Control](#cache-control)
+  * [Rate Limit Handling](#rate-limit-handling)
+  * [Advanced Usage & Type Safety](#advanced-usage--type-safety)
+* [API Reference](#-api-reference)
+
+  * [PRCClient](#prcclient-methods)
+  * [PRCHelpers](#prchelpers-methods)
+* [License](#-license)
+
+---
+
+## ✨ Features
+
+* ✅ 100% TypeScript support
+* ⚡ Built-in in-memory caching
+* 🚦 Automatic rate limit handling
+* 🔒 Fully typed API responses
+* 🧩 100% API coverage
+* 🪶 Extremely low memory footprint
+* 🎯 Minimal, predictable API
+
+---
+
+## 📖 Usage
+
+### Basic Example
+
+```ts
+import { PRCClient } from 'erlc.ts';
 
 const client = new PRCClient({ serverKey: 'your-server-key' });
 
+const { data: players } = await client.getPlayers();
+players.forEach(p => console.log(p.Player, p.Team));
+```
+
+---
+
+### Error Handling
+
+All API calls may throw a `PRCAPIError`. You can inspect the error type for more detail:
+
+```ts
+import { PRCClient, PRCAPIError } from 'erlc.ts';
+
 try {
-  const { data: players } = await client.getPlayers();
-  console.log(players);
+  const { data } = await client.getPlayers();
 } catch (err) {
   if (err instanceof PRCAPIError) {
-    if (err.isRateLimit) {
-      console.error('Rate limited! Please try again later.');
-    } else if (err.isAuthError) {
-      console.error('Authentication error:', err.message);
-    } else {
-      console.error('API error:', err.message);
-    }
-  } else {
-    console.error('Unexpected error:', err);
+    if (err.isRateLimit) console.error('Rate limited!');
+    else if (err.isAuthError) console.error('Bad server key!');
+    else console.error('API error:', err.message);
   }
 }
 ```
 
-### Advanced Usage & Type Safety
+---
 
-```typescript
-import { PRCClient, PRCHelpers, Player } from 'erlc.ts';
+### Cache Control
 
-const client = new PRCClient({ serverKey: 'your-server-key' });
-const helpers = new PRCHelpers(client);
+The client caches GET requests by default.
 
-// Get all police team players and send them a message
-const policePlayers: Player[] = await helpers.getPlayersByTeam('Police');
-for (const player of policePlayers) {
-  await helpers.sendPM(player.Player, 'get your ass to HQ');
-}
+* ⏱ Default: **30s**
+* ❌ Disable: `cache: false`
+* ⏳ Custom: `cacheMaxAge` (ms)
+* 🧹 Clear manually: `client.clearCache()`
+* 🔍 Inspect: `client.getCacheSize()`
 
-// Get server stats and print them
-const stats = await helpers.getServerStats(12); // last 12 hours
-console.log(`Current: ${stats.current.players}/${stats.current.maxPlayers} - ${stats.current.name}`);
-console.log(`Joins: ${stats.recent.joins}, Kills: ${stats.recent.kills}, Unique Players: ${stats.recent.uniquePlayers}`);
+```ts
+const client = new PRCClient({
+  serverKey: 'your-server-key',
+  cacheMaxAge: 120_000, // 2 minutes
+});
 
-// Full type safety for all API responses
-const { data: status } = await client.getServerStatus();
-console.log('Server name:', status.Name);
+client.clearCache();
+console.log('Cache size:', client.getCacheSize());
 ```
-
 
 ---
 
-## API Reference
+### Rate Limit Handling
 
-All methods return fully typed promises. See `src/types.ts` for all type definitions.
+Handled automatically:
 
+* Detects `retry_after` from the API
+* Retries up to **3 times**
+* Throws `PRCAPIError` with `isRateLimit = true` if still exceeded
+
+```ts
+try {
+  await client.getPlayers();
+} catch (err) {
+  if (err instanceof PRCAPIError && err.isRateLimit) {
+    console.error('Slow down!');
+  }
+}
+```
+
+---
+
+### Advanced Usage & Type Safety
+
+```ts
+import { PRCHelpers, Player } from 'erlc.ts';
+
+const helpers = new PRCHelpers(client);
+
+const cops: Player[] = await helpers.getPlayersByTeam('Police');
+for (const cop of cops) {
+  await helpers.sendPM(cop.Player, 'Report to HQ!');
+}
+
+const stats = await helpers.getServerStats(12);
+console.log(`Current players: ${stats.current.players}/${stats.current.maxPlayers}`);
+```
+
+---
+
+## 🛠 API Reference
 
 ### PRCClient Methods
 
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `getServerStatus()` | Get current server status | `Promise<APIResponse<ServerStatus>>` |
-| `getPlayers()` | Get all players | `Promise<APIResponse<Player[]>` |
-| `getQueue()` | Get server queue | `Promise<APIResponse<number[]>>` |
-| `getVehicles()` | Get all vehicles | `Promise<APIResponse<Vehicle[]>>` |
-| `getBans()` | Get all bans | `Promise<APIResponse<ServerBans>>` |
-| `getStaff()` | Get staff info | `Promise<APIResponse<ServerStaff>>` |
-| `getJoinLogs()` | Get join/leave logs | `Promise<APIResponse<JoinLog[]>>` |
-| `getKillLogs()` | Get kill logs | `Promise<APIResponse<KillLog[]>>` |
-| `getCommandLogs()` | Get command logs | `Promise<APIResponse<CommandLog[]>>` |
-| `getModCalls()` | Get mod calls | `Promise<APIResponse<ModCall[]>>` |
-| `executeCommand(command: string)` | Run a server command | `Promise<APIResponse<null>>` |
-| `clearCache()` | Clear internal cache | `void` |
-| `getCacheSize()` | Get cache size | `number` |
+| Method                | Description               | Returns                              |
+| --------------------- | ------------------------- | ------------------------------------ |
+| `getServerStatus()`   | Get current server status | `Promise<APIResponse<ServerStatus>>` |
+| `getPlayers()`        | Get all players           | `Promise<APIResponse<Player[]>>`     |
+| `getQueue()`          | Get server queue          | `Promise<APIResponse<number[]>>`     |
+| `getVehicles()`       | Get all vehicles          | `Promise<APIResponse<Vehicle[]>>`    |
+| `getBans()`           | Get all bans              | `Promise<APIResponse<ServerBans>>`   |
+| `getStaff()`          | Get staff info            | `Promise<APIResponse<ServerStaff>>`  |
+| `getJoinLogs()`       | Get join/leave logs       | `Promise<APIResponse<JoinLog[]>>`    |
+| `getKillLogs()`       | Get kill logs             | `Promise<APIResponse<KillLog[]>>`    |
+| `getCommandLogs()`    | Get command logs          | `Promise<APIResponse<CommandLog[]>>` |
+| `getModCalls()`       | Get mod calls             | `Promise<APIResponse<ModCall[]>>`    |
+| `executeCommand(cmd)` | Run a server command      | `Promise<APIResponse<null>>`         |
+| `clearCache()`        | Clear cache               | `void`                               |
+| `getCacheSize()`      | Cache size                | `number`                             |
 
-
-**Example: Get all players**
-
-```typescript
-const { data: players } = await client.getPlayers();
-players.forEach(player => console.log(player.Player, player.Team));
-```
-
+---
 
 ### PRCHelpers Methods
 
-Helper methods for common tasks. All return fully typed promises unless otherwise noted.
-
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player \| null>` |
-| `getPlayersByTeam(team: string)` | Get all players on a team | `Promise<Player[]>` |
-| `getStaff()` | Get all staff players | `Promise<Player[]>` |
-| `getOnlineCount()` | Get online player count | `Promise<number>` |
-| `isServerFull()` | Is server full? | `Promise<boolean>` |
-| `sendMessage(message: string)` | Send global message | `Promise<void>` |
-| `sendPM(player: string, message: string)` | Send private message | `Promise<void>` |
-| `kickPlayer(player: string, reason?: string)` | Kick a player | `Promise<void>` |
-| `banPlayer(player: string, reason?: string)` | Ban a player | `Promise<void>` |
-| `teleportPlayer(player: string, target: string)` | Teleport player | `Promise<void>` |
-| `setTeam(player: string, team: string)` | Set player's team | `Promise<void>` |
-| `getRecentJoins(minutes?: number)` | Recent joins | `Promise<JoinLog[]>` |
-| `getRecentLeaves(minutes?: number)` | Recent leaves | `Promise<JoinLog[]>` |
-| `getPlayerKills(player: string, hours?: number)` | Player's kills | `Promise<KillLog[]>` |
-| `getPlayerDeaths(player: string, hours?: number)` | Player's deaths | `Promise<KillLog[]>` |
-| `getPlayerCommands(player: string, hours?: number)` | Player's commands | `Promise<CommandLog[]>` |
-| `getUnansweredModCalls(hours?: number)` | Unanswered mod calls | `Promise<ModCall[]>` |
-| `waitForPlayer(nameOrId: string, timeoutMs?: number)` | Wait for player to join | `Promise<Player>` |
-| `waitForPlayerCount(count: number, timeoutMs?: number)` | Wait for player count | `Promise<void>` |
-| `formatPlayerName(player: Player)` | Format player name | `string` |
-| `formatTimestamp(timestamp: number)` | Format timestamp | `string` |
-| `formatUptime(startTimestamp: number)` | Format uptime | `string` |
-| `kickAllFromTeam(team: string, reason?: string)` | Kick all from team | `Promise<string[]>` |
-| `messageAllStaff(message: string)` | Message all staff | `Promise<void>` |
-| `getServerStats(hours?: number)` | Get server stats summary | `Promise<{ current, recent }>` |
-
-
-**Example: Find and message a player**
-
-```typescript
-const player = await helpers.findPlayer('Melonly');
-if (player) {
-  await helpers.sendPM(player.Player, 'ur cool bro');
-}
-```
-
+| Method                                             | Description               |
+| -------------------------------------------------- | ------------------------- |
+| `findPlayer(nameOrId)` → `Player \| null`          | Find player by name or ID |
+| `getPlayersByTeam(team)` → `Player[]`              | Players on a team         |
+| `getStaff()` → `Player[]`                          | All staff players         |
+| `getOnlineCount()` → `number`                      | Current online count      |
+| `isServerFull()` → `boolean`                       | Is server full?           |
+| `sendMessage(msg)` → `void`                        | Send global message       |
+| `sendPM(player, msg)` → `void`                     | Send private message      |
+| `kickPlayer(player, reason?)` → `void`             | Kick a player             |
+| `banPlayer(player, reason?)` → `void`              | Ban a player              |
+| `teleportPlayer(player, target)` → `void`          | Teleport player           |
+| `setTeam(player, team)` → `void`                   | Set team                  |
+| `getRecentJoins(mins?)` → `JoinLog[]`              | Recent joins              |
+| `getRecentLeaves(mins?)` → `JoinLog[]`             | Recent leaves             |
+| `getPlayerKills(player, hrs?)` → `KillLog[]`       | Player kills              |
+| `getPlayerDeaths(player, hrs?)` → `KillLog[]`      | Player deaths             |
+| `getPlayerCommands(player, hrs?)` → `CommandLog[]` | Player commands           |
+| `getUnansweredModCalls(hrs?)` → `ModCall[]`        | Unanswered mod calls      |
+| `waitForPlayer(nameOrId, timeout?)` → `Player`     | Wait for player           |
+| `waitForPlayerCount(count, timeout?)` → `void`     | Wait for count            |
+| `kickAllFromTeam(team, reason?)` → `string[]`      | Kick all team players     |
+| `messageAllStaff(msg)` → `void`                    | Message all staff         |
+| `getServerStats(hrs?)` → `{ current, recent }`     | Server stats summary      |
 
 ---
 
-## Features
-
-- 100% TypeScript support
-- Built-in caching
-- Automatic rate limit handling
-- 100% API coverage
-- Fully typed responses
-- Extremely low memory usage
-- Simple, minimal API
-
----
-
-## License
+## 📄 License
 
 MIT

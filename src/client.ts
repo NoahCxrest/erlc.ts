@@ -102,9 +102,6 @@ export class PRCClient {
       return { data: this.cache.get<T>(cacheKey)! };
     }
 
-    // No client-side rate limit check; handled by retry_after from server
-
-
     const fetchOptions: RequestInit = {
       method,
       headers: this.getHeaders(),
