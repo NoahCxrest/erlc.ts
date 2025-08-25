@@ -105,26 +105,29 @@ export class PRCClient {
     // No client-side rate limit check; handled by retry_after from server
 
 
-    const response = await fetch(url, {
+    const fetchOptions: RequestInit = {
       method,
       headers: this.getHeaders(),
-      body: body ? JSON.stringify(body) : null,
-    });
+    };
+    if (method !== 'GET' && body) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+    const response = await fetch(url, fetchOptions);
 
   const rateLimitInfo = this.extractRateLimitInfo(response);
 
 
     if (!response.ok) {
-      let errorBody;
+      let errorBody: any = {};
       try {
         errorBody = await response.json();
       } catch {}
       if (
         errorBody &&
-        (errorBody.code === 4001 || errorBody.errorCode === 4001) &&
+        ((errorBody?.code === 4001 || errorBody?.errorCode === 4001)) &&
         retryCount < MAX_RETRIES
       ) {
-        if (typeof errorBody.retry_after === 'number' && errorBody.retry_after > 0) {
+        if (typeof errorBody?.retry_after === 'number' && errorBody?.retry_after > 0) {
           await RateLimiter.waitForRetryAfter(errorBody.retry_after);
         }
         return this.makeRequest<T>(method, endpoint, body, bucket, cacheable, retryCount + 1);
@@ -137,7 +140,7 @@ export class PRCClient {
     const contentType = response.headers.get('content-type');
 
     if (contentType?.includes('application/json')) {
-      data = await response.json();
+      data = (await response.json()) as T;
     } else {
       data = null as T;
     }

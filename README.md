@@ -27,6 +27,8 @@ await client.executeCommand(':h Check out Melonly!');
 - TypeScript support
 - Built-in caching
 - Automatic Rate limit handling
+- 100% API coverage
+- 100% Typed out. Type Safety for everyone!
 - Extremely low memory usage
 - Simple API
 
