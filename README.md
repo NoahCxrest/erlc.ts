@@ -101,7 +101,7 @@ Helper methods for common tasks. All return fully typed promises unless otherwis
 
 | Method | Description | Returns |
 |--------|-------------|---------|
-| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player | null>` |
+| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player` | null>` |
 | `getPlayersByTeam(team: string)` | Get all players on a team | `Promise<Player[]>` |
 | `getStaff()` | Get all staff players | `Promise<Player[]>` |
 | `getOnlineCount()` | Get online player count | `Promise<number>` |
