@@ -12,6 +12,37 @@ npm install erlc.ts
 ## Usage
 ## Example: Type Safety & Advanced Usage
 
+## Error Handling Example
+
+All API methods can throw a `PRCAPIError` if something goes wrong (e.g., invalid key, rate limit, server offline). You should wrap your calls in a try/catch block to handle errors gracefully:
+
+```typescript
+import { PRCClient, PRCAPIError } from 'erlc.ts';
+
+const client = new PRCClient({ serverKey: 'your-server-key' });
+
+async function safeGetPlayers() {
+	try {
+		const { data: players } = await client.getPlayers();
+		console.log(players);
+	} catch (err) {
+		if (err instanceof PRCAPIError) {
+			if (err.isRateLimit) {
+				console.error('Rate limited! Please try again later.');
+			} else if (err.isAuthError) {
+				console.error('Authentication error:', err.message);
+			} else {
+				console.error('API error:', err.message);
+			}
+		} else {
+			console.error('Unexpected error:', err);
+		}
+	}
+}
+
+safeGetPlayers();
+```
+
 ```typescript
 import { PRCClient, PRCHelpers, Player } from 'erlc.ts';
 
@@ -86,7 +117,6 @@ All methods return fully typed promises. See `src/types.ts` for all type definit
 | `executeCommand(command: string)` | Run a server command | `Promise<APIResponse<null>>` |
 | `clearCache()` | Clear internal cache | `void` |
 | `getCacheSize()` | Get cache size | `number` |
-| `getRateLimitInfo(bucket?: string)` | Get rate limit info (no-op) | `undefined` |
 
 #### Example: Get all players
 
@@ -101,7 +131,7 @@ Helper methods for common tasks. All return fully typed promises unless otherwis
 
 | Method | Description | Returns |
 |--------|-------------|---------|
-| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player` | null>` |
+| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player>` | null>` |
 | `getPlayersByTeam(team: string)` | Get all players on a team | `Promise<Player[]>` |
 | `getStaff()` | Get all staff players | `Promise<Player[]>` |
 | `getOnlineCount()` | Get online player count | `Promise<number>` |
@@ -132,7 +162,7 @@ Helper methods for common tasks. All return fully typed promises unless otherwis
 ```typescript
 const player = await helpers.findPlayer('Melonly');
 if (player) {
-	await helpers.sendPM(player.Player, 'You have a call!');
+	await helpers.sendPM(player.Player, 'ur cool bro');
 }
 ```
 

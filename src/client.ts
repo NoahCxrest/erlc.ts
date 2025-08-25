@@ -257,14 +257,4 @@ export class PRCClient {
   getCacheSize(): number {
     return this.cache?.size() || 0;
   }
-
-  /**
-   * Gets the current rate limit info for a bucket.
-   * @param {string} [bucket='global'] - The rate limit bucket.
-   * @returns {RateLimitInfo | undefined} The rate limit info.
-   */
-  // getRateLimitInfo is now a no-op
-  getRateLimitInfo(_bucket = 'global') {
-    return undefined;
-  }
 }
