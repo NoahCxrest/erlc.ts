@@ -1,7 +1,7 @@
 # erlc.ts — PRC API Client [![CodeFactor](https://www.codefactor.io/repository/github/noahcxrest/erlc.ts/badge)](https://www.codefactor.io/repository/github/noahcxrest/erlc.ts)
 
 > A minimal, type-safe TypeScript client for the Police Roleplay Community (PRC) API.
-> No dependencies. No nonsense.
+> No dependencies. No bullshit.
 
 ---
 
@@ -144,7 +144,7 @@ const helpers = new PRCHelpers(client);
 
 const cops: Player[] = await helpers.getPlayersByTeam('Police');
 for (const cop of cops) {
-  await helpers.sendPM(cop.Player, 'Report to HQ!');
+  await helpers.sendPM(cop.Player, 'get ur ass to hq rookie');
 }
 
 const stats = await helpers.getServerStats(12);
