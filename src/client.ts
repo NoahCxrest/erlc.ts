@@ -1,5 +1,5 @@
+import { RateLimiter } from './ratelimit.js';
 import { Cache } from './cache.js';
-import { RateLimitManager } from './ratelimit.js';
 import { PRCAPIError } from './errors.js';
 import {
   PRCClientOptions,
@@ -25,7 +25,6 @@ export class PRCClient {
   private readonly serverKey: string | undefined;
   private readonly globalKey: string | undefined;
   private readonly cache: Cache | null;
-  private readonly rateLimiter: RateLimitManager;
 
   /**
    * Creates a new PRCClient instance.
@@ -41,7 +40,6 @@ export class PRCClient {
     this.serverKey = options.serverKey;
     this.globalKey = options.globalKey;
     this.cache = options.cache !== false ? new Cache(options.cacheMaxAge) : null;
-    this.rateLimiter = new RateLimitManager();
   }
 
   /**
@@ -70,29 +68,9 @@ export class PRCClient {
    * @param {Response} response - The fetch response object.
    * @returns {RateLimitInfo | undefined} The extracted rate limit info, if available.
    */
-  private extractRateLimitInfo(response: Response): RateLimitInfo | undefined {
-    const bucket = response.headers.get('X-RateLimit-Bucket');
-    const limit = response.headers.get('X-RateLimit-Limit');
-    const remaining = response.headers.get('X-RateLimit-Remaining');
-    const reset = response.headers.get('X-RateLimit-Reset');
-
-    if (!bucket || !limit || !remaining || !reset) return undefined;
-
-    const rateLimitInfo: RateLimitInfo = {
-      bucket,
-      limit: parseInt(limit),
-      remaining: parseInt(remaining),
-      reset: parseInt(reset)
-    };
-
-    this.rateLimiter.updateBucket(
-      rateLimitInfo.bucket,
-      rateLimitInfo.limit,
-      rateLimitInfo.remaining,
-      rateLimitInfo.reset
-    );
-
-    return rateLimitInfo;
+  // No-op: Rate limit info is not tracked client-side anymore
+  private extractRateLimitInfo(_response: Response): RateLimitInfo | undefined {
+    return undefined;
   }
 
   /**
@@ -124,9 +102,7 @@ export class PRCClient {
       return { data: this.cache.get<T>(cacheKey)! };
     }
 
-    if (!this.rateLimiter.canMakeRequest(bucket)) {
-      await this.rateLimiter.waitForReset(bucket);
-    }
+    // No client-side rate limit check; handled by retry_after from server
 
 
     const response = await fetch(url, {
@@ -135,21 +111,22 @@ export class PRCClient {
       body: body ? JSON.stringify(body) : null,
     });
 
-    const rateLimitInfo = this.extractRateLimitInfo(response);
+  const rateLimitInfo = this.extractRateLimitInfo(response);
 
 
     if (!response.ok) {
       let errorBody;
       try {
         errorBody = await response.json();
-      } catch {
-      }
+      } catch {}
       if (
         errorBody &&
         (errorBody.code === 4001 || errorBody.errorCode === 4001) &&
         retryCount < MAX_RETRIES
       ) {
-        await this.rateLimiter.waitForReset(bucket);
+        if (typeof errorBody.retry_after === 'number' && errorBody.retry_after > 0) {
+          await RateLimiter.waitForRetryAfter(errorBody.retry_after);
+        }
         return this.makeRequest<T>(method, endpoint, body, bucket, cacheable, retryCount + 1);
       }
       throw PRCAPIError.fromResponse(response, errorBody);
@@ -170,7 +147,7 @@ export class PRCClient {
       this.cache.set(cacheKey, data);
     }
 
-    return { data, rateLimit: rateLimitInfo as RateLimitInfo };
+  return { data, rateLimit: rateLimitInfo as RateLimitInfo };
   }
 
   /**
@@ -283,7 +260,8 @@ export class PRCClient {
    * @param {string} [bucket='global'] - The rate limit bucket.
    * @returns {RateLimitInfo | undefined} The rate limit info.
    */
-  getRateLimitInfo(bucket = 'global') {
-    return this.rateLimiter.getBucketInfo(bucket);
+  // getRateLimitInfo is now a no-op
+  getRateLimitInfo(_bucket = 'global') {
+    return undefined;
   }
 }

@@ -1,7 +1,7 @@
+export { RateLimiter } from './ratelimit.js';
 export { PRCClient } from './client.js';
 export { PRCAPIError } from './errors.js';
 export { Cache } from './cache.js';
-export { RateLimitManager } from './ratelimit.js';
 
 export type {
     PRCClientOptions,
