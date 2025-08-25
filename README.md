@@ -10,6 +10,47 @@ npm install erlc.ts
 ```
 
 ## Usage
+## Example: Type Safety & Advanced Usage
+
+```typescript
+import { PRCClient, PRCHelpers, Player } from 'erlc.ts';
+
+const client = new PRCClient({ serverKey: 'your-server-key' });
+const helpers = new PRCHelpers(client);
+
+// Get all police team players and send them a message
+async function messagePoliceTeam() {
+	// Type-safe: players is Player[]
+	const policePlayers: Player[] = await helpers.getPlayersByTeam('Police');
+	for (const player of policePlayers) {
+		// Type-safe: player.Player is string
+		await helpers.sendPM(player.Player, 'get your ass to HQ');
+	}
+}
+
+// Get server stats and print them
+async function printServerStats() {
+	const stats = await helpers.getServerStats(12); // last 12 hours
+	console.log(`Current: ${stats.current.players}/${stats.current.maxPlayers} - ${stats.current.name}`);
+	console.log(`Joins: ${stats.recent.joins}, Kills: ${stats.recent.kills}, Unique Players: ${stats.recent.uniquePlayers}`);
+}
+
+// Full type safety for all API responses
+async function showTypeSafety() {
+	const { data: status } = await client.getServerStatus();
+	// status is fully typed as ServerStatus
+	console.log('Server name:', status.Name);
+}
+
+// Run all examples
+async function main() {
+	await messagePoliceTeam();
+	await printServerStats();
+	await showTypeSafety();
+}
+
+main();
+```
 
 
 ```typescript
