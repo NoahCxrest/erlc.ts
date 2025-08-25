@@ -1,47 +1,61 @@
-# PRC API Client
+
+# erlc.ts — PRC API Client
 
 A minimal, type-safe TypeScript client for the Police Roleplay Community (PRC) API.
-No packages, no bullshit. 
+No dependencies, no nonsense.
 
-## Install
+
+---
+
+## Installation
 
 ```bash
 npm install erlc.ts
 ```
 
+
 ## Usage
-## Example: Type Safety & Advanced Usage
 
-## Error Handling Example
+### Basic Example
 
-All API methods can throw a `PRCAPIError` if something goes wrong (e.g., invalid key, rate limit, server offline). You should wrap your calls in a try/catch block to handle errors gracefully:
+```typescript
+import { PRCClient } from 'erlc.ts';
+
+const client = new PRCClient({ serverKey: 'your-server-key' });
+const { data: status } = await client.getServerStatus();
+console.log(status);
+
+await client.executeCommand(':h Check out Melonly!');
+```
+
+### Error Handling
+
+All API methods can throw a `PRCAPIError` if something goes wrong (e.g., invalid key, rate limit, server offline). Wrap your calls in a try/catch block:
 
 ```typescript
 import { PRCClient, PRCAPIError } from 'erlc.ts';
 
 const client = new PRCClient({ serverKey: 'your-server-key' });
 
-async function safeGetPlayers() {
-	try {
-		const { data: players } = await client.getPlayers();
-		console.log(players);
-	} catch (err) {
-		if (err instanceof PRCAPIError) {
-			if (err.isRateLimit) {
-				console.error('Rate limited! Please try again later.');
-			} else if (err.isAuthError) {
-				console.error('Authentication error:', err.message);
-			} else {
-				console.error('API error:', err.message);
-			}
-		} else {
-			console.error('Unexpected error:', err);
-		}
-	}
+try {
+  const { data: players } = await client.getPlayers();
+  console.log(players);
+} catch (err) {
+  if (err instanceof PRCAPIError) {
+    if (err.isRateLimit) {
+      console.error('Rate limited! Please try again later.');
+    } else if (err.isAuthError) {
+      console.error('Authentication error:', err.message);
+    } else {
+      console.error('API error:', err.message);
+    }
+  } else {
+    console.error('Unexpected error:', err);
+  }
 }
-
-safeGetPlayers();
 ```
+
+### Advanced Usage & Type Safety
 
 ```typescript
 import { PRCClient, PRCHelpers, Player } from 'erlc.ts';
@@ -50,62 +64,35 @@ const client = new PRCClient({ serverKey: 'your-server-key' });
 const helpers = new PRCHelpers(client);
 
 // Get all police team players and send them a message
-async function messagePoliceTeam() {
-	// Type-safe: players is Player[]
-	const policePlayers: Player[] = await helpers.getPlayersByTeam('Police');
-	for (const player of policePlayers) {
-		// Type-safe: player.Player is string
-		await helpers.sendPM(player.Player, 'get your ass to HQ');
-	}
+const policePlayers: Player[] = await helpers.getPlayersByTeam('Police');
+for (const player of policePlayers) {
+  await helpers.sendPM(player.Player, 'get your ass to HQ');
 }
 
 // Get server stats and print them
-async function printServerStats() {
-	const stats = await helpers.getServerStats(12); // last 12 hours
-	console.log(`Current: ${stats.current.players}/${stats.current.maxPlayers} - ${stats.current.name}`);
-	console.log(`Joins: ${stats.recent.joins}, Kills: ${stats.recent.kills}, Unique Players: ${stats.recent.uniquePlayers}`);
-}
+const stats = await helpers.getServerStats(12); // last 12 hours
+console.log(`Current: ${stats.current.players}/${stats.current.maxPlayers} - ${stats.current.name}`);
+console.log(`Joins: ${stats.recent.joins}, Kills: ${stats.recent.kills}, Unique Players: ${stats.recent.uniquePlayers}`);
 
 // Full type safety for all API responses
-async function showTypeSafety() {
-	const { data: status } = await client.getServerStatus();
-	// status is fully typed as ServerStatus
-	console.log('Server name:', status.Name);
-}
-
-// Run all examples
-async function main() {
-	await messagePoliceTeam();
-	await printServerStats();
-	await showTypeSafety();
-}
-
-main();
-```
-
-
-```typescript
-import { PRCClient, PRCHelpers } from 'erlc.ts';
-
-const client = new PRCClient({ serverKey: 'your-server-key' });
-const helpers = new PRCHelpers(client);
-
 const { data: status } = await client.getServerStatus();
-console.log(status);
-
-await client.executeCommand(':h Check out Melonly!');
+console.log('Server name:', status.Name);
 ```
+
+
+---
 
 ## API Reference
 
-### PRCClient Methods
-
 All methods return fully typed promises. See `src/types.ts` for all type definitions.
+
+
+### PRCClient Methods
 
 | Method | Description | Returns |
 |--------|-------------|---------|
 | `getServerStatus()` | Get current server status | `Promise<APIResponse<ServerStatus>>` |
-| `getPlayers()` | Get all players | `Promise<APIResponse<Player[]>>` |
+| `getPlayers()` | Get all players | `Promise<APIResponse<Player[]>` |
 | `getQueue()` | Get server queue | `Promise<APIResponse<number[]>>` |
 | `getVehicles()` | Get all vehicles | `Promise<APIResponse<Vehicle[]>>` |
 | `getBans()` | Get all bans | `Promise<APIResponse<ServerBans>>` |
@@ -118,20 +105,23 @@ All methods return fully typed promises. See `src/types.ts` for all type definit
 | `clearCache()` | Clear internal cache | `void` |
 | `getCacheSize()` | Get cache size | `number` |
 
-#### Example: Get all players
+
+**Example: Get all players**
 
 ```typescript
 const { data: players } = await client.getPlayers();
 players.forEach(player => console.log(player.Player, player.Team));
 ```
 
+
 ### PRCHelpers Methods
 
 Helper methods for common tasks. All return fully typed promises unless otherwise noted.
 
+
 | Method | Description | Returns |
 |--------|-------------|---------|
-| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player>` | null>` |
+| `findPlayer(nameOrId: string)` | Find player by name or ID | `Promise<Player \| null>` |
 | `getPlayersByTeam(team: string)` | Get all players on a team | `Promise<Player[]>` |
 | `getStaff()` | Get all staff players | `Promise<Player[]>` |
 | `getOnlineCount()` | Get online player count | `Promise<number>` |
@@ -157,24 +147,30 @@ Helper methods for common tasks. All return fully typed promises unless otherwis
 | `messageAllStaff(message: string)` | Message all staff | `Promise<void>` |
 | `getServerStats(hours?: number)` | Get server stats summary | `Promise<{ current, recent }>` |
 
-#### Example: Find and message a player
+
+**Example: Find and message a player**
 
 ```typescript
 const player = await helpers.findPlayer('Melonly');
 if (player) {
-	await helpers.sendPM(player.Player, 'ur cool bro');
+  await helpers.sendPM(player.Player, 'ur cool bro');
 }
 ```
 
+
+---
+
 ## Features
 
-- TypeScript support
+- 100% TypeScript support
 - Built-in caching
-- Automatic Rate limit handling
+- Automatic rate limit handling
 - 100% API coverage
-- 100% Typed out. Type Safety for everyone!
+- Fully typed responses
 - Extremely low memory usage
-- Simple API
+- Simple, minimal API
+
+---
 
 ## License
 
