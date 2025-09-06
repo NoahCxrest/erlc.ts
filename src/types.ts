@@ -26,13 +26,19 @@ export interface ServerStatus {
     CurrentPlayers: number;
     MaxPlayers: number;
     JoinKey: string;
-    AccVerifiedReq: string;
+    AccVerifiedReq: 'Disabled' | 'Enabled' | 'Phone/ID';
     TeamBalance: boolean;
 }
 
 export interface Player {
+    /**
+     * Formatted as PlayerName:ID
+     */
     Player: string;
     Permission: 'Normal' | 'Server Administrator' | 'Server Owner' | 'Server Moderator';
+    /**
+     * Only available if player is on non-civilian team
+     */
     Callsign?: string;
     Team: 'Police' | 'Jail' | 'Sheriff' | 'DOT' | 'Fire' | 'Civilian';
 }
@@ -40,23 +46,42 @@ export interface Player {
 export interface JoinLog {
     Join: boolean;
     Timestamp: number;
+    /**
+     * Formatted as PlayerName:ID
+     */
     Player: string;
 }
 
 export interface KillLog {
+    /**
+     * Formatted as PlayerName:ID
+     */
     Killed: string;
     Timestamp: number;
+    /**
+     * Formatted as PlayerName:ID
+     */
     Killer: string;
 }
 
 export interface CommandLog {
+    /**
+     * Formatted as PlayerName:ID
+     */
     Player: string;
     Timestamp: number;
     Command: string;
 }
 
 export interface ModCall {
+    /**
+     * Formatted as PlayerName:ID
+     */
     Caller: string;
+    /**
+     * Only available if a moderator responded to the call
+     * Formatted as PlayerName:ID
+     */
     Moderator?: string;
     Timestamp: number;
 }
@@ -97,5 +122,5 @@ export enum ErrorCode {
     RESTRICTED_COMMAND = 4002,
     PROHIBITED_MESSAGE = 4003,
     RESTRICTED_RESOURCE = 9998,
-    OUTDATED_MODULE = 9999
+    OUTDATED_MODULE = 9999,
 }
