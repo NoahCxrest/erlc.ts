@@ -242,14 +242,13 @@ export class PRCHelpers {
     }
 
     /**
-     * Format a player's name with callsign if present.
-     * @param {Player} player - The player object.
-     * @returns {string} The formatted player name.
+     * Format PlayerName:ID into an object with Name and ID.
+     * @param player - The player string formatted as PlayerName:ID.
+     * @returns {Object} An object containing the player's Name and ID.
      */
-    formatPlayerName(player: Player): string {
-        const name = player.Player.split(':')[0];
-        const callsign = player.Callsign ? `[${player.Callsign}]` : '';
-        return `${callsign}${name}`.trim();
+    formatPlayer(player: string): { Name: string; ID: string } {
+        const split = player.split(':');
+        return { Name: split[0]!, ID: split[1]! };
     }
 
     /**

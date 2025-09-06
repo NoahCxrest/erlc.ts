@@ -18,6 +18,9 @@ export class Cache {
             timestamp: Date.now(),
             maxAge: maxAge ?? this.defaultMaxAge
         });
+        setTimeout(() => {
+            this.cache.delete(key);
+        }, maxAge ?? this.defaultMaxAge);
     }
 
     get<T>(key: string): T | null {
