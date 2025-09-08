@@ -24,6 +24,7 @@ export class PRCClient {
   private readonly serverKey: string | undefined;
   private readonly globalKey: string | undefined;
   private readonly cache: Cache | null;
+  private readonly headers: Record<string, string>;
 
   /**
    * Creates a new PRCClient instance.
@@ -39,13 +40,14 @@ export class PRCClient {
     this.serverKey = options.serverKey;
     this.globalKey = options.globalKey;
     this.cache = options.cache !== false ? new Cache(options.cacheMaxAge, options.redisUrl) : null;
+    this.headers = this.buildHeaders();
   }
 
   /**
-   * Constructs the headers for API requests.
+   * Builds the headers for API requests.
    * @returns {Record<string, string>} The headers object.
    */
-  private getHeaders(): Record<string, string> {
+  private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': '*/*',
@@ -68,9 +70,7 @@ export class PRCClient {
    * @param {'GET' | 'POST'} method - HTTP method.
    * @param {string} endpoint - API endpoint.
    * @param {any} [body] - Request body for POST requests.
-   * @param {string} [bucket='global'] - Rate limit bucket.
    * @param {boolean} [cacheable=false] - Whether to use cache for GET requests.
-   * @param {number} [retryCount=0] - Current retry count for rate limit errors.
    * @returns {Promise<APIResponse<T>>} The API response.
    * @throws {PRCAPIError} If the request fails.
    */
@@ -78,65 +78,65 @@ export class PRCClient {
     method: 'GET' | 'POST',
     endpoint: string,
     body?: any,
-    bucket: string = 'global',
-    cacheable: boolean = false,
-    retryCount: number = 0
+    cacheable: boolean = false
   ): Promise<APIResponse<T>> {
 
     const url = `${this.baseURL}${endpoint}`;
     const cacheKey = `${method}:${endpoint}`;
     const MAX_RETRIES = 3;
 
-    if (cacheable && method === 'GET' && this.cache && await this.cache.has(cacheKey)) {
+    if (cacheable && method === 'GET' && this.cache) {
       const cachedData = await this.cache.get<T>(cacheKey);
       if (cachedData !== null) {
         return { data: cachedData };
       }
     }
 
-    const fetchOptions: RequestInit = {
-      method,
-      headers: this.getHeaders(),
-    };
-    if (method !== 'GET' && body) {
-      fetchOptions.body = JSON.stringify(body);
-    }
-    const response = await fetch(url, fetchOptions);
-
-    if (!response.ok) {
-      let errorBody: any = {};
-      try {
-        errorBody = await response.json();
-      } catch { }
-      if (
-        errorBody &&
-        ((errorBody?.code === 4001 || errorBody?.errorCode === 4001)) &&
-        retryCount < MAX_RETRIES
-      ) {
-        if (typeof errorBody?.retry_after === 'number' && errorBody?.retry_after > 0) {
-          await RateLimiter.waitForRetryAfter(errorBody.retry_after);
-        }
-        return this.makeRequest<T>(method, endpoint, body, bucket, cacheable, retryCount + 1);
+    let retryCount = 0;
+    while (true) {
+      const fetchOptions: RequestInit = {
+        method,
+        headers: this.headers,
+      };
+      if (method !== 'GET' && body) {
+        fetchOptions.body = JSON.stringify(body);
       }
-      throw PRCAPIError.fromResponse(response, errorBody);
+      const response = await fetch(url, fetchOptions);
+
+      if (!response.ok) {
+        let errorBody: any = {};
+        try {
+          errorBody = await response.json();
+        } catch { }
+        if (
+          errorBody &&
+          ((errorBody?.code === 4001 || errorBody?.errorCode === 4001)) &&
+          retryCount < MAX_RETRIES
+        ) {
+          if (typeof errorBody?.retry_after === 'number' && errorBody?.retry_after > 0) {
+            await RateLimiter.waitForRetryAfter(errorBody.retry_after);
+          }
+          retryCount++;
+          continue;
+        }
+        throw PRCAPIError.fromResponse(response, errorBody);
+      }
+
+      let data: T;
+      const contentType = response.headers.get('content-type');
+
+      if (contentType?.includes('application/json')) {
+        data = (await response.json()) as T;
+      } else {
+        data = null as T;
+      }
+
+      if (cacheable && method === 'GET' && this.cache) {
+        await this.cache.set(cacheKey, data);
+      }
+
+      return { data };
     }
-
-
-    let data: T;
-    const contentType = response.headers.get('content-type');
-
-    if (contentType?.includes('application/json')) {
-      data = (await response.json()) as T;
-    } else {
-      data = null as T;
-    }
-
-
-    if (cacheable && method === 'GET' && this.cache) {
-      await this.cache.set(cacheKey, data);
-    }
-
-    return { data };
   }
 
   /**
@@ -144,7 +144,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<ServerStatus>>} The server status response.
    */
   async getServerStatus(): Promise<APIResponse<ServerStatus>> {
-    return this.makeRequest<ServerStatus>('GET', '/server', undefined, 'global', true);
+    return this.makeRequest<ServerStatus>('GET', '/server', undefined, true);
   }
 
   /**
@@ -152,7 +152,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<Player[]>>} The players response.
    */
   async getPlayers(): Promise<APIResponse<Player[]>> {
-    return this.makeRequest<Player[]>('GET', '/server/players', undefined, 'global', true);
+    return this.makeRequest<Player[]>('GET', '/server/players', undefined, true);
   }
 
   /**
@@ -160,7 +160,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<number[]>>} The queue response.
    */
   async getQueue(): Promise<APIResponse<number[]>> {
-    return this.makeRequest<number[]>('GET', '/server/queue', undefined, 'global', true);
+    return this.makeRequest<number[]>('GET', '/server/queue', undefined, true);
   }
 
   /**
@@ -168,7 +168,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<Vehicle[]>>} The vehicles response.
    */
   async getVehicles(): Promise<APIResponse<Vehicle[]>> {
-    return this.makeRequest<Vehicle[]>('GET', '/server/vehicles', undefined, 'global', true);
+    return this.makeRequest<Vehicle[]>('GET', '/server/vehicles', undefined, true);
   }
 
   /**
@@ -176,7 +176,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<ServerBans>>} The bans response.
    */
   async getBans(): Promise<APIResponse<ServerBans>> {
-    return this.makeRequest<ServerBans>('GET', '/server/bans', undefined, 'global', true);
+    return this.makeRequest<ServerBans>('GET', '/server/bans', undefined, true);
   }
 
   /**
@@ -184,7 +184,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<ServerStaff>>} The staff response.
    */
   async getStaff(): Promise<APIResponse<ServerStaff>> {
-    return this.makeRequest<ServerStaff>('GET', '/server/staff', undefined, 'global', true);
+    return this.makeRequest<ServerStaff>('GET', '/server/staff', undefined, true);
   }
 
   /**
@@ -192,7 +192,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<JoinLog[]>>} The join logs response.
    */
   async getJoinLogs(): Promise<APIResponse<JoinLog[]>> {
-    return this.makeRequest<JoinLog[]>('GET', '/server/joinlogs', undefined, 'global', false);
+    return this.makeRequest<JoinLog[]>('GET', '/server/joinlogs', undefined, false);
   }
 
   /**
@@ -200,7 +200,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<KillLog[]>>} The kill logs response.
    */
   async getKillLogs(): Promise<APIResponse<KillLog[]>> {
-    return this.makeRequest<KillLog[]>('GET', '/server/killlogs', undefined, 'global', false);
+    return this.makeRequest<KillLog[]>('GET', '/server/killlogs', undefined, false);
   }
 
   /**
@@ -208,7 +208,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<CommandLog[]>>} The command logs response.
    */
   async getCommandLogs(): Promise<APIResponse<CommandLog[]>> {
-    return this.makeRequest<CommandLog[]>('GET', '/server/commandlogs', undefined, 'global', false);
+    return this.makeRequest<CommandLog[]>('GET', '/server/commandlogs', undefined, false);
   }
 
   /**
@@ -216,7 +216,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<ModCall[]>>} The mod calls response.
    */
   async getModCalls(): Promise<APIResponse<ModCall[]>> {
-    return this.makeRequest<ModCall[]>('GET', '/server/modcalls', undefined, 'global', false);
+    return this.makeRequest<ModCall[]>('GET', '/server/modcalls', undefined, false);
   }
 
   /**
@@ -225,8 +225,7 @@ export class PRCClient {
    * @returns {Promise<APIResponse<null>>} The response from the command execution.
    */
   async executeCommand(command: string): Promise<APIResponse<null>> {
-    const bucket = this.serverKey ? `command-${this.serverKey}` : 'command-global';
-    return this.makeRequest<null>('POST', '/server/command', { command }, bucket);
+    return this.makeRequest<null>('POST', '/server/command', { command });
   }
 
   /**
