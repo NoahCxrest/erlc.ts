@@ -5,7 +5,7 @@
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install erlc.ts
@@ -13,7 +13,7 @@ npm install erlc.ts
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```ts
 import { PRCClient } from 'erlc.ts';
@@ -28,37 +28,37 @@ await client.executeCommand(':h Check out Melonly!');
 
 ---
 
-## 📚 Table of Contents
+## Table of Contents
 
-* [Features](#-features)
-* [Usage](#-usage)
+* [Features](#features)
+* [Usage](#usage)
 
   * [Basic Example](#basic-example)
   * [Error Handling](#error-handling)
   * [Cache Control](#cache-control)
   * [Rate Limit Handling](#rate-limit-handling)
   * [Advanced Usage & Type Safety](#advanced-usage--type-safety)
-* [API Reference](#-api-reference)
+* [API Reference](#api-reference)
 
   * [PRCClient](#prcclient-methods)
   * [PRCHelpers](#prchelpers-methods)
-* [License](#-license)
+* [License](#license)
 
 ---
 
-## ✨ Features
+## Features
 
-* ✅ 100% TypeScript support
-* ⚡ Built-in caching (in-memory or Redis)
-* 🚦 Automatic rate limit handling
-* 🔒 Fully typed API responses
-* 🧩 100% API coverage
-* 🪶 Extremely low memory footprint
-* 🎯 Minimal, predictable API
+* 100% TypeScript support
+* Built-in caching (in-memory or Redis)
+* Automatic rate limit handling
+* Fully typed API responses
+* 100% API coverage
+* Extremely low memory footprint
+* Minimal, predictable API
 
 ---
 
-## 📖 Usage
+## Usage
 
 ### Basic Example
 
@@ -97,12 +97,12 @@ try {
 
 The client caches GET requests by default. Supports both in-memory and Redis caching.
 
-* ⏱ Default: **30s**
-* ❌ Disable: `cache: false`
-* ⏳ Custom: `cacheMaxAge` (ms)
-* 🔴 Redis: `redisUrl` (e.g., `redis://localhost:6379`)
-* 🧹 Clear manually: `client.clearCache()`
-* 🔍 Inspect: `client.getCacheSize()`
+* Default: **30s**
+* Disable: `cache: false`
+* Custom: `cacheMaxAge` (ms)
+* Redis: `redisUrl` (e.g., `redis://localhost:6379`)
+* Clear manually: `client.clearCache()`
+* Inspect: `client.getCacheSize()`
 
 ```ts
 // In-memory caching
@@ -162,7 +162,7 @@ console.log(`Current players: ${stats.current.players}/${stats.current.maxPlayer
 
 ---
 
-## 🛠 API Reference
+## API Reference
 
 ### PRCClient Methods
 
@@ -213,6 +213,6 @@ console.log(`Current players: ${stats.current.players}/${stats.current.maxPlayer
 
 ---
 
-## 📄 License
+## License
 
 MIT
