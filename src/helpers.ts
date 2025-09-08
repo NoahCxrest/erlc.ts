@@ -1,43 +1,46 @@
 import { PRCClient } from './client.js';
 import { CommandLog, JoinLog, KillLog, ModCall, Player } from './types.js';
 
-
 /**
  * Helper utilities for interacting with the PRCClient and managing player/server data.
  * Provides methods for player management, messaging, server stats, and log retrieval.
+ * All methods handle API errors by propagating them to the caller.
  */
 export class PRCHelpers {
     /**
-     * @param {PRCClient} client - The PRCClient instance to use for API calls.
+     * Creates an instance of PRCHelpers.
+     * @param client - The PRCClient instance to use for API calls.
      */
     constructor(private client: PRCClient) { }
 
     /**
-     * Find a player by name or ID (partial match, case-insensitive).
-     * @param {string} nameOrId - The player's name or ID to search for.
-     * @returns {Promise<Player|null>} The found player or null if not found.
+     * Finds a player by name or ID using partial match (case-insensitive).
+     * Searches both the player name and the full Player string.
+     * @param nameOrId - The player's name or ID to search for.
+     * @returns The found player or null if not found.
      */
     async findPlayer(nameOrId: string): Promise<Player | null> {
         const { data: players } = await this.client.getPlayers();
+        const lowerQuery = nameOrId.toLowerCase();
         return players.find(p =>
-            p.Player.toLowerCase().includes(nameOrId.toLowerCase()) ||
-            p.Player.includes(nameOrId)
+            p.Player.toLowerCase().includes(lowerQuery)
         ) || null;
     }
 
     /**
-     * Get all players on a specific team.
-     * @param {string} team - The team name to filter by.
-     * @returns {Promise<Player[]>} Array of players on the team.
+     * Retrieves all players on a specific team.
+     * @param team - The team name to filter by (case-insensitive).
+     * @returns Array of players on the specified team.
      */
     async getPlayersByTeam(team: string): Promise<Player[]> {
         const { data: players } = await this.client.getPlayers();
-        return players.filter(p => p.Team.toLowerCase() === team.toLowerCase());
+        const lowerTeam = team.toLowerCase();
+        return players.filter(p => p.Team.toLowerCase() === lowerTeam);
     }
 
     /**
-     * Get all staff members (players with non-Normal permission).
-     * @returns {Promise<Player[]>} Array of staff players.
+     * Retrieves all staff members (players with non-Normal permission).
+     * @returns Array of staff players.
      */
     async getStaff(): Promise<Player[]> {
         const { data: players } = await this.client.getPlayers();
@@ -45,8 +48,8 @@ export class PRCHelpers {
     }
 
     /**
-     * Get the current number of online players.
-     * @returns {Promise<number>} The number of online players.
+     * Retrieves the current number of online players.
+     * @returns The number of online players.
      */
     async getOnlineCount(): Promise<number> {
         const { data: status } = await this.client.getServerStatus();
@@ -54,8 +57,8 @@ export class PRCHelpers {
     }
 
     /**
-     * Check if the server is full.
-     * @returns {Promise<boolean>} True if server is full, else false.
+     * Checks if the server is at maximum capacity.
+     * @returns True if the server is full, false otherwise.
      */
     async isServerFull(): Promise<boolean> {
         const { data: status } = await this.client.getServerStatus();
@@ -63,29 +66,26 @@ export class PRCHelpers {
     }
 
     /**
-     * Send a global message to all players.
-     * @param {string} message - The message to send.
-     * @returns {Promise<void>}
+     * Sends a global message to all players on the server.
+     * @param message - The message to broadcast.
      */
     async sendMessage(message: string): Promise<void> {
         await this.client.executeCommand(`:h ${message}`);
     }
 
     /**
-     * Send a private message to a player.
-     * @param {string} player - The player to message.
-     * @param {string} message - The message content.
-     * @returns {Promise<void>}
+     * Sends a private message to a specific player.
+     * @param player - The name of the player to message.
+     * @param message - The content of the private message.
      */
     async sendPM(player: string, message: string): Promise<void> {
         await this.client.executeCommand(`:pm ${player} ${message}`);
     }
 
     /**
-     * Kick a player from the server.
-     * @param {string} player - The player to kick.
-     * @param {string} [reason] - Optional reason for kicking.
-     * @returns {Promise<void>}
+     * Kicks a player from the server.
+     * @param player - The name of the player to kick.
+     * @param reason - Optional reason for the kick.
      */
     async kickPlayer(player: string, reason?: string): Promise<void> {
         const cmd = reason ? `:kick ${player} ${reason}` : `:kick ${player}`;
@@ -93,10 +93,9 @@ export class PRCHelpers {
     }
 
     /**
-     * Ban a player from the server.
-     * @param {string} player - The player to ban.
-     * @param {string} [reason] - Optional reason for banning.
-     * @returns {Promise<void>}
+     * Bans a player from the server.
+     * @param player - The name of the player to ban.
+     * @param reason - Optional reason for the ban.
      */
     async banPlayer(player: string, reason?: string): Promise<void> {
         const cmd = reason ? `:ban ${player} ${reason}` : `:ban ${player}`;
@@ -104,29 +103,27 @@ export class PRCHelpers {
     }
 
     /**
-     * Teleport a player to another player or location.
-     * @param {string} player - The player to teleport.
-     * @param {string} target - The target player or location.
-     * @returns {Promise<void>}
+     * Teleports a player to another player or location.
+     * @param player - The name of the player to teleport.
+     * @param target - The target player name or location coordinates.
      */
     async teleportPlayer(player: string, target: string): Promise<void> {
         await this.client.executeCommand(`:tp ${player} ${target}`);
     }
 
     /**
-     * Set a player's team.
-     * @param {string} player - The player to set the team for.
-     * @param {string} team - The team name.
-     * @returns {Promise<void>}
+     * Sets a player's team.
+     * @param player - The name of the player to change teams.
+     * @param team - The name of the team to assign.
      */
     async setTeam(player: string, team: string): Promise<void> {
         await this.client.executeCommand(`:team ${player} ${team}`);
     }
 
     /**
-     * Get recent join logs within the last N minutes.
-     * @param {number} [minutes=10] - Minutes to look back.
-     * @returns {Promise<JoinLog[]>} Array of join logs.
+     * Retrieves recent join logs within the specified time frame.
+     * @param minutes - Number of minutes to look back (default: 10).
+     * @returns Array of join log entries.
      */
     async getRecentJoins(minutes: number = 10): Promise<JoinLog[]> {
         const { data: logs } = await this.client.getJoinLogs();
@@ -135,9 +132,9 @@ export class PRCHelpers {
     }
 
     /**
-     * Get recent leave logs within the last N minutes.
-     * @param {number} [minutes=10] - Minutes to look back.
-     * @returns {Promise<JoinLog[]>} Array of leave logs.
+     * Retrieves recent leave logs within the specified time frame.
+     * @param minutes - Number of minutes to look back (default: 10).
+     * @returns Array of leave log entries.
      */
     async getRecentLeaves(minutes: number = 10): Promise<JoinLog[]> {
         const { data: logs } = await this.client.getJoinLogs();
@@ -146,54 +143,57 @@ export class PRCHelpers {
     }
 
     /**
-     * Get kill logs for a player within the last N hours.
-     * @param {string} player - The player name or ID.
-     * @param {number} [hours=1] - Hours to look back.
-     * @returns {Promise<KillLog[]>} Array of kill logs.
+     * Retrieves kill logs for a specific player within the specified time frame.
+     * @param player - The name or ID of the player (partial match, case-insensitive).
+     * @param hours - Number of hours to look back (default: 1).
+     * @returns Array of kill log entries where the player was the killer.
      */
     async getPlayerKills(player: string, hours: number = 1): Promise<KillLog[]> {
         const { data: logs } = await this.client.getKillLogs();
         const cutoff = Date.now() / 1000 - (hours * 3600);
+        const lowerPlayer = player.toLowerCase();
         return logs.filter(log =>
-            log.Killer.toLowerCase().includes(player.toLowerCase()) &&
+            log.Killer.toLowerCase().includes(lowerPlayer) &&
             log.Timestamp > cutoff
         );
     }
 
     /**
-     * Get death logs for a player within the last N hours.
-     * @param {string} player - The player name or ID.
-     * @param {number} [hours=1] - Hours to look back.
-     * @returns {Promise<KillLog[]>} Array of death logs.
+     * Retrieves death logs for a specific player within the specified time frame.
+     * @param player - The name or ID of the player (partial match, case-insensitive).
+     * @param hours - Number of hours to look back (default: 1).
+     * @returns Array of kill log entries where the player was killed.
      */
-    async getPlayerDeaths(player: string, hours = 1): Promise<KillLog[]> {
+    async getPlayerDeaths(player: string, hours: number = 1): Promise<KillLog[]> {
         const { data: logs } = await this.client.getKillLogs();
         const cutoff = Date.now() / 1000 - (hours * 3600);
+        const lowerPlayer = player.toLowerCase();
         return logs.filter(log =>
-            log.Killed.toLowerCase().includes(player.toLowerCase()) &&
+            log.Killed.toLowerCase().includes(lowerPlayer) &&
             log.Timestamp > cutoff
         );
     }
 
     /**
-     * Get command logs for a player within the last N hours.
-     * @param {string} player - The player name or ID.
-     * @param {number} [hours=1] - Hours to look back.
-     * @returns {Promise<CommandLog[]>} Array of command logs.
+     * Retrieves command logs for a specific player within the specified time frame.
+     * @param player - The name or ID of the player (partial match, case-insensitive).
+     * @param hours - Number of hours to look back (default: 1).
+     * @returns Array of command log entries for the player.
      */
     async getPlayerCommands(player: string, hours: number = 1): Promise<CommandLog[]> {
         const { data: logs } = await this.client.getCommandLogs();
         const cutoff = Date.now() / 1000 - (hours * 3600);
+        const lowerPlayer = player.toLowerCase();
         return logs.filter(log =>
-            log.Player.toLowerCase().includes(player.toLowerCase()) &&
+            log.Player.toLowerCase().includes(lowerPlayer) &&
             log.Timestamp > cutoff
         );
     }
 
     /**
-     * Get unanswered mod calls within the last N hours.
-     * @param {number} [hours=1] - Hours to look back.
-     * @returns {Promise<ModCall[]>} Array of unanswered mod calls.
+     * Retrieves unanswered mod calls within the specified time frame.
+     * @param hours - Number of hours to look back (default: 1).
+     * @returns Array of unanswered mod call entries.
      */
     async getUnansweredModCalls(hours: number = 1): Promise<ModCall[]> {
         const { data: logs } = await this.client.getModCalls();
@@ -202,11 +202,11 @@ export class PRCHelpers {
     }
 
     /**
-     * Wait for a player to appear online, polling until timeout.
-     * @param {string} nameOrId - The player name or ID to wait for.
-     * @param {number} [timeoutMs=30000] - Timeout in milliseconds.
-     * @returns {Promise<Player>} The found player.
-     * @throws {Error} If player is not found within timeout.
+     * Waits for a player to appear online, polling at intervals until timeout.
+     * @param nameOrId - The player's name or ID to wait for (partial match, case-insensitive).
+     * @param timeoutMs - Timeout in milliseconds (default: 30000).
+     * @returns The found player.
+     * @throws Error if the player is not found within the timeout.
      */
     async waitForPlayer(nameOrId: string, timeoutMs: number = 30000): Promise<Player> {
         const startTime = Date.now();
@@ -222,11 +222,10 @@ export class PRCHelpers {
     }
 
     /**
-     * Wait for the server to reach a certain player count, polling until timeout.
-     * @param {number} count - The player count to wait for.
-     * @param {number} [timeoutMs=60000] - Timeout in milliseconds.
-     * @returns {Promise<void>}
-     * @throws {Error} If count is not reached within timeout.
+     * Waits for the server to reach a specific player count, polling at intervals until timeout.
+     * @param count - The target player count to wait for.
+     * @param timeoutMs - Timeout in milliseconds (default: 60000).
+     * @throws Error if the count is not reached within the timeout.
      */
     async waitForPlayerCount(count: number, timeoutMs: number = 60000): Promise<void> {
         const startTime = Date.now();
@@ -242,28 +241,32 @@ export class PRCHelpers {
     }
 
     /**
-     * Format PlayerName:ID into an object with Name and ID.
-     * @param player - The player string formatted as PlayerName:ID.
-     * @returns {Object} An object containing the player's Name and ID.
+     * Parses a player string in the format "PlayerName:ID" into an object.
+     * @param player - The player string to parse.
+     * @returns An object containing the player's Name and ID.
+     * @throws Error if the player string is not in the expected format.
      */
     formatPlayer(player: string): { Name: string; ID: string } {
         const split = player.split(':');
+        if (split.length !== 2) {
+            throw new Error(`Invalid player format: ${player}. Expected "Name:ID"`);
+        }
         return { Name: split[0]!, ID: split[1]! };
     }
 
     /**
-     * Format a UNIX timestamp as a locale string.
-     * @param {number} timestamp - The UNIX timestamp (seconds).
-     * @returns {string} The formatted date/time string.
+     * Formats a UNIX timestamp into a localized date/time string.
+     * @param timestamp - The UNIX timestamp in seconds.
+     * @returns The formatted date/time string.
      */
     formatTimestamp(timestamp: number): string {
         return new Date(timestamp * 1000).toLocaleString();
     }
 
     /**
-     * Format uptime from a start timestamp to now as hours and minutes.
-     * @param {number} startTimestamp - The server start timestamp (seconds).
-     * @returns {string} The formatted uptime string.
+     * Formats the uptime from a start timestamp to the current time as hours and minutes.
+     * @param startTimestamp - The server start timestamp in seconds.
+     * @returns The formatted uptime string (e.g., "2h 30m").
      */
     formatUptime(startTimestamp: number): string {
         const uptimeMs = Date.now() - (startTimestamp * 1000);
@@ -274,20 +277,22 @@ export class PRCHelpers {
 
     /**
      * Kicks all players from a specific team.
-     * @param team - The team name to kick players from.
+     * @param team - The team name to kick players from (case-insensitive).
      * @param reason - Optional reason for kicking.
      * @returns Array of player names that were kicked.
      */
     async kickAllFromTeam(team: string, reason?: string): Promise<string[]> {
         const players = await this.getPlayersByTeam(team);
-        const userIds = players
-            .map(player => player.Player.split(':')[0])
+        if (players.length === 0) return [];
+
+        const userNames = players
+            .map(player => this.formatPlayer(player.Player).Name)
             .filter(Boolean);
 
-        if (userIds.length > 0) {
+        if (userNames.length > 0) {
             const cmd = reason
-                ? `:kick ${userIds.join(',')} ${reason}`
-                : `:kick ${userIds.join(',')}`;
+                ? `:kick ${userNames.join(',')} ${reason}`
+                : `:kick ${userNames.join(',')}`;
             await this.client.executeCommand(cmd);
         }
 
@@ -296,25 +301,41 @@ export class PRCHelpers {
 
     /**
      * Sends a private message to all staff members.
-     * @param message - The message to send.
+     * @param message - The message to send to staff.
      */
     async messageAllStaff(message: string): Promise<void> {
         const staff = await this.getStaff();
-        const userIds = staff
-            .map(member => member.Player.split(':')[0])
+        if (staff.length === 0) return;
+
+        const userNames = staff
+            .map(member => this.formatPlayer(member.Player).Name)
             .filter(Boolean);
 
-        if (userIds.length > 0) {
-            await this.client.executeCommand(`:pm ${userIds.join(',')} ${message}`);
+        if (userNames.length > 0) {
+            await this.client.executeCommand(`:pm ${userNames.join(',')} ${message}`);
         }
     }
 
     /**
-     * Gets server statistics for the last N hours.
-     * @param hours - Number of hours to look back (default: 24).
-     * @returns Object containing current and recent server stats.
+     * Retrieves comprehensive server statistics for the specified time period.
+     * @param hours - Number of hours to look back for recent stats (default: 24).
+     * @returns An object containing current server info and recent activity stats.
      */
-    async getServerStats(hours = 24) {
+    async getServerStats(hours: number = 24): Promise<{
+        current: {
+            players: number;
+            maxPlayers: number;
+            name: string;
+            owner: number;
+        };
+        recent: {
+            joins: number;
+            kills: number;
+            commands: number;
+            modCalls: number;
+            uniquePlayers: number;
+        };
+    }> {
         const cutoff = Date.now() / 1000 - (hours * 3600);
 
         const [
