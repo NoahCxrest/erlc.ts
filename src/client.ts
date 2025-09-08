@@ -6,6 +6,7 @@ import {
   CommandLog,
   JoinLog,
   KillLog,
+  MethodOptions,
   ModCall,
   Player,
   PRCClientOptions,
@@ -82,10 +83,11 @@ export class PRCClient {
    * @template T
    * @param {string} cacheKey - The cache key.
    * @param {T} data - The data to cache.
+   * @param {number} [maxAge] - Optional custom max age for this cache entry.
    */
-  private async setCachedData<T>(cacheKey: string, data: T): Promise<void> {
+  private async setCachedData<T>(cacheKey: string, data: T, maxAge?: number): Promise<void> {
     if (this.cache) {
-      await this.cache.set(cacheKey, data);
+      await this.cache.set(cacheKey, data, maxAge);
     }
   }
 
@@ -157,6 +159,8 @@ export class PRCClient {
    * @param {string} endpoint - API endpoint.
    * @param {any} [body] - Request body for POST requests.
    * @param {boolean} [cacheable=false] - Whether to use cache for GET requests.
+   * @param {number} [cacheMaxAge] - Optional custom cache max age for this request.
+   * @param {boolean} [cacheOverride] - Optional per-method cache override.
    * @returns {Promise<APIResponse<T>>} The API response.
    * @throws {PRCAPIError} If the request fails.
    */
@@ -164,14 +168,19 @@ export class PRCClient {
     method: 'GET' | 'POST',
     endpoint: string,
     body?: any,
-    cacheable: boolean = false
+    cacheable: boolean = false,
+    cacheMaxAge?: number,
+    cacheOverride?: boolean
   ): Promise<APIResponse<T>> {
 
     const url = `${this.baseURL}${endpoint}`;
     const cacheKey = `${method}:${endpoint}`;
     const MAX_RETRIES = 3;
 
-    if (cacheable && method === 'GET') {
+    // Determine if caching should be used for this request
+    const shouldCache = cacheOverride !== undefined ? cacheOverride : cacheable;
+
+    if (shouldCache && method === 'GET') {
       const cachedData = await this.getCachedData<T>(cacheKey);
       if (cachedData !== null) {
         return { data: cachedData };
@@ -197,8 +206,8 @@ export class PRCClient {
 
       const data = await this.parseResponseData<T>(response);
 
-      if (cacheable && method === 'GET') {
-        await this.setCachedData(cacheKey, data);
+      if (shouldCache && method === 'GET') {
+        await this.setCachedData(cacheKey, data, cacheMaxAge);
       }
 
       return { data };
@@ -207,82 +216,96 @@ export class PRCClient {
 
   /**
    * Gets the current server status.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<ServerStatus>>} The server status response.
    */
-  async getServerStatus(): Promise<APIResponse<ServerStatus>> {
-    return this.makeRequest<ServerStatus>('GET', '/server', undefined, true);
+  async getServerStatus(options?: MethodOptions): Promise<APIResponse<ServerStatus>> {
+    return this.makeRequest<ServerStatus>('GET', '/server', undefined, true, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the list of current players on the server.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<Player[]>>} The players response.
    */
-  async getPlayers(): Promise<APIResponse<Player[]>> {
-    return this.makeRequest<Player[]>('GET', '/server/players', undefined, true);
+  async getPlayers(options?: MethodOptions): Promise<APIResponse<Player[]>> {
+    return this.makeRequest<Player[]>('GET', '/server/players', undefined, true, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the current server queue.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<number[]>>} The queue response.
    */
-  async getQueue(): Promise<APIResponse<number[]>> {
-    return this.makeRequest<number[]>('GET', '/server/queue', undefined, true);
+  async getQueue(options?: MethodOptions): Promise<APIResponse<number[]>> {
+    return this.makeRequest<number[]>('GET', '/server/queue', undefined, true, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the list of vehicles on the server.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<Vehicle[]>>} The vehicles response.
    */
-  async getVehicles(): Promise<APIResponse<Vehicle[]>> {
-    return this.makeRequest<Vehicle[]>('GET', '/server/vehicles', undefined, true);
+  async getVehicles(options?: MethodOptions): Promise<APIResponse<Vehicle[]>> {
+    return this.makeRequest<Vehicle[]>('GET', '/server/vehicles', undefined, true, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the list of server bans.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<ServerBans>>} The bans response.
    */
-  async getBans(): Promise<APIResponse<ServerBans>> {
-    return this.makeRequest<ServerBans>('GET', '/server/bans', undefined, true);
+  async getBans(options?: MethodOptions): Promise<APIResponse<ServerBans>> {
+    return this.makeRequest<ServerBans>('GET', '/server/bans', undefined, true, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the list of server staff.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<ServerStaff>>} The staff response.
    */
-  async getStaff(): Promise<APIResponse<ServerStaff>> {
-    return this.makeRequest<ServerStaff>('GET', '/server/staff', undefined, true);
+  async getStaff(options?: MethodOptions): Promise<APIResponse<ServerStaff>> {
+    return this.makeRequest<ServerStaff>('GET', '/server/staff', undefined, true, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the join logs for the server.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<JoinLog[]>>} The join logs response.
    */
-  async getJoinLogs(): Promise<APIResponse<JoinLog[]>> {
-    return this.makeRequest<JoinLog[]>('GET', '/server/joinlogs', undefined, false);
+  async getJoinLogs(options?: MethodOptions): Promise<APIResponse<JoinLog[]>> {
+    const shouldCache = options?.cache === true && !!options?.cacheMaxAge;
+    return this.makeRequest<JoinLog[]>('GET', '/server/joinlogs', undefined, shouldCache, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the kill logs for the server.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<KillLog[]>>} The kill logs response.
    */
-  async getKillLogs(): Promise<APIResponse<KillLog[]>> {
-    return this.makeRequest<KillLog[]>('GET', '/server/killlogs', undefined, false);
+  async getKillLogs(options?: MethodOptions): Promise<APIResponse<KillLog[]>> {
+    const shouldCache = options?.cache === true && !!options?.cacheMaxAge;
+    return this.makeRequest<KillLog[]>('GET', '/server/killlogs', undefined, shouldCache, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the command logs for the server.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<CommandLog[]>>} The command logs response.
    */
-  async getCommandLogs(): Promise<APIResponse<CommandLog[]>> {
-    return this.makeRequest<CommandLog[]>('GET', '/server/commandlogs', undefined, false);
+  async getCommandLogs(options?: MethodOptions): Promise<APIResponse<CommandLog[]>> {
+    const shouldCache = options?.cache === true && !!options?.cacheMaxAge;
+    return this.makeRequest<CommandLog[]>('GET', '/server/commandlogs', undefined, shouldCache, options?.cacheMaxAge, options?.cache);
   }
 
   /**
    * Gets the mod calls for the server.
+   * @param {MethodOptions} [options] - Optional method options.
    * @returns {Promise<APIResponse<ModCall[]>>} The mod calls response.
    */
-  async getModCalls(): Promise<APIResponse<ModCall[]>> {
-    return this.makeRequest<ModCall[]>('GET', '/server/modcalls', undefined, false);
+  async getModCalls(options?: MethodOptions): Promise<APIResponse<ModCall[]>> {
+    const shouldCache = options?.cache === true && !!options?.cacheMaxAge;
+    return this.makeRequest<ModCall[]>('GET', '/server/modcalls', undefined, shouldCache, options?.cacheMaxAge, options?.cache);
   }
 
   /**

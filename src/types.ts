@@ -11,6 +11,14 @@ export interface PRCClientOptions {
 }
 
 /**
+ * Options for individual API method calls.
+ */
+export interface MethodOptions {
+    cache?: boolean;
+    cacheMaxAge?: number;
+}
+
+/**
  * Information about the current rate limit status.
  */
 export interface RateLimitInfo {

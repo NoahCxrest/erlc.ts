@@ -100,27 +100,36 @@ The client caches GET requests by default. Supports both in-memory and Redis cac
 * Default: **30s**
 * Disable: `cache: false`
 * Custom: `cacheMaxAge` (ms)
+* Per-method: `cacheMaxAge` in method options
+* Per-method cache control: `cache: true/false` in method options
 * Redis: `redisUrl` (e.g., `redis://localhost:6379`)
 * Clear manually: `client.clearCache()`
 * Inspect: `client.getCacheSize()`
 
 ```ts
-// In-memory caching
+// Global cache settings
 const client = new PRCClient({
   serverKey: 'your-server-key',
   cacheMaxAge: 120_000, // 2 mins
 });
 
-// Redis caching
-const redisClient = new PRCClient({
-  serverKey: 'your-server-key',
-  redisUrl: 'redis://localhost:6379',
-  cacheMaxAge: 300_000, // 5 mins
-});
+// Per-method cache control
+const { data: status } = await client.getServerStatus({ cacheMaxAge: 60_000 }); // 1 min
+const { data: players } = await client.getPlayers({ cacheMaxAge: 30_000 }); // 30s
 
-client.clearCache();
-console.log('Cache size:', client.getCacheSize());
+// Enable caching for logs (normally not cached)
+const { data: logs } = await client.getJoinLogs({ 
+  cache: true, 
+  cacheMaxAge: 300_000 
+}); // 5 minutes
+
+// Disable caching for a specific call
+const { data: freshPlayers } = await client.getPlayers({ cache: false });
 ```
+
+---
+
+### Rate Limit Handling
 
 ---
 
@@ -160,27 +169,45 @@ const stats = await helpers.getServerStats(12);
 console.log(`Current players: ${stats.current.players}/${stats.current.maxPlayers}`);
 ```
 
+#### Method Options
+
+All GET methods accept an optional `options` parameter for per-method configuration:
+
+```ts
+// Custom cache age for this specific call
+const { data: players } = await client.getPlayers({ cacheMaxAge: 60_000 }); // 1 minute
+
+// Enable caching for logs (normally not cached)
+const { data: logs } = await client.getJoinLogs({ 
+  cache: true, 
+  cacheMaxAge: 300_000 
+}); // 5 minutes
+
+// Disable caching for a specific call
+const { data: freshPlayers } = await client.getPlayers({ cache: false });
+```
+
 ---
 
 ## API Reference
 
 ### PRCClient Methods
 
-| Method                | Description               | Returns                              |
-| --------------------- | ------------------------- | ------------------------------------ |
-| `getServerStatus()`   | Get current server status | `Promise<APIResponse<ServerStatus>>` |
-| `getPlayers()`        | Get all players           | `Promise<APIResponse<Player[]>>`     |
-| `getQueue()`          | Get server queue          | `Promise<APIResponse<number[]>>`     |
-| `getVehicles()`       | Get all vehicles          | `Promise<APIResponse<Vehicle[]>>`    |
-| `getBans()`           | Get all bans              | `Promise<APIResponse<ServerBans>>`   |
-| `getStaff()`          | Get staff info            | `Promise<APIResponse<ServerStaff>>`  |
-| `getJoinLogs()`       | Get join/leave logs       | `Promise<APIResponse<JoinLog[]>>`    |
-| `getKillLogs()`       | Get kill logs             | `Promise<APIResponse<KillLog[]>>`    |
-| `getCommandLogs()`    | Get command logs          | `Promise<APIResponse<CommandLog[]>>` |
-| `getModCalls()`       | Get mod calls             | `Promise<APIResponse<ModCall[]>>`    |
-| `executeCommand(cmd)` | Run a server command      | `Promise<APIResponse<null>>`         |
-| `clearCache()`        | Clear cache               | `void`                               |
-| `getCacheSize()`      | Cache size                | `number`                             |
+| Method                          | Description               | Returns                              |
+| ------------------------------- | ------------------------- | ------------------------------------ |
+| `getServerStatus(options?)`     | Get current server status | `Promise<APIResponse<ServerStatus>>` |
+| `getPlayers(options?)`          | Get all players           | `Promise<APIResponse<Player[]>>`     |
+| `getQueue(options?)`            | Get server queue          | `Promise<APIResponse<number[]>>`     |
+| `getVehicles(options?)`         | Get all vehicles          | `Promise<APIResponse<Vehicle[]>>`    |
+| `getBans(options?)`             | Get all bans              | `Promise<APIResponse<ServerBans>>`   |
+| `getStaff(options?)`            | Get staff info            | `Promise<APIResponse<ServerStaff>>`  |
+| `getJoinLogs(options?)`         | Get join/leave logs       | `Promise<APIResponse<JoinLog[]>>`    |
+| `getKillLogs(options?)`         | Get kill logs             | `Promise<APIResponse<KillLog[]>>`    |
+| `getCommandLogs(options?)`      | Get command logs          | `Promise<APIResponse<CommandLog[]>>` |
+| `getModCalls(options?)`         | Get mod calls             | `Promise<APIResponse<ModCall[]>>`    |
+| `executeCommand(cmd)`           | Run a server command      | `Promise<APIResponse<null>>`         |
+| `clearCache()`                  | Clear cache               | `void`                               |
+| `getCacheSize()`                | Cache size                | `number`                             |
 
 ---
 
