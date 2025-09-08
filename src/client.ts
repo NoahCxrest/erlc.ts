@@ -1,19 +1,18 @@
-import { RateLimiter } from './ratelimit.js';
 import { Cache } from './cache.js';
 import { PRCAPIError } from './errors.js';
+import { RateLimiter } from './ratelimit.js';
 import {
-  PRCClientOptions,
   APIResponse,
-  RateLimitInfo,
-  ServerStatus,
-  Player,
+  CommandLog,
   JoinLog,
   KillLog,
-  CommandLog,
   ModCall,
-  Vehicle,
+  Player,
+  PRCClientOptions,
   ServerBans,
-  ServerStaff
+  ServerStaff,
+  ServerStatus,
+  Vehicle
 } from './types.js';
 
 /**
@@ -39,7 +38,7 @@ export class PRCClient {
     this.baseURL = options.baseURL || 'https://api.policeroleplay.community/v1';
     this.serverKey = options.serverKey;
     this.globalKey = options.globalKey;
-    this.cache = options.cache !== false ? new Cache(options.cacheMaxAge) : null;
+    this.cache = options.cache !== false ? new Cache(options.cacheMaxAge, options.redisUrl) : null;
   }
 
   /**
@@ -61,16 +60,6 @@ export class PRCClient {
     }
 
     return headers;
-  }
-
-  /**
-   * Extracts rate limit information from the API response headers and updates the rate limiter.
-   * @param {Response} response - The fetch response object.
-   * @returns {RateLimitInfo | undefined} The extracted rate limit info, if available.
-   */
-  // No-op: Rate limit info is not tracked client-side anymore
-  private extractRateLimitInfo(_response: Response): RateLimitInfo | undefined {
-    return undefined;
   }
 
   /**
@@ -98,8 +87,11 @@ export class PRCClient {
     const cacheKey = `${method}:${endpoint}`;
     const MAX_RETRIES = 3;
 
-    if (cacheable && method === 'GET' && this.cache?.has(cacheKey)) {
-      return { data: this.cache.get<T>(cacheKey)! };
+    if (cacheable && method === 'GET' && this.cache && await this.cache.has(cacheKey)) {
+      const cachedData = await this.cache.get<T>(cacheKey);
+      if (cachedData !== null) {
+        return { data: cachedData };
+      }
     }
 
     const fetchOptions: RequestInit = {
@@ -110,9 +102,6 @@ export class PRCClient {
       fetchOptions.body = JSON.stringify(body);
     }
     const response = await fetch(url, fetchOptions);
-
-    const rateLimitInfo = this.extractRateLimitInfo(response);
-
 
     if (!response.ok) {
       let errorBody: any = {};
@@ -144,10 +133,10 @@ export class PRCClient {
 
 
     if (cacheable && method === 'GET' && this.cache) {
-      this.cache.set(cacheKey, data);
+      await this.cache.set(cacheKey, data);
     }
 
-    return { data, rateLimit: rateLimitInfo as RateLimitInfo };
+    return { data };
   }
 
   /**
@@ -242,16 +231,58 @@ export class PRCClient {
 
   /**
    * Clears the internal cache.
+   * @returns A promise that resolves when the cache is cleared.
    */
-  clearCache(): void {
-    this.cache?.clear();
+  async clearCache(): Promise<void> {
+    if (this.cache) {
+      await this.cache.clear();
+    }
   }
 
   /**
    * Gets the current cache size.
-   * @returns {number} The number of cached items.
+   * @returns A promise that resolves to the number of cached items.
    */
-  getCacheSize(): number {
-    return this.cache?.size() || 0;
+  async getCacheSize(): Promise<number> {
+    return this.cache ? await this.cache.size() : 0;
+  }
+
+  /**
+   * Gets a cache entry directly for debugging purposes (only works with in-memory cache).
+   * @param key - The cache key.
+   * @returns The cached data or null if not found or using Redis.
+   */
+  getCacheEntry(key: string): any {
+    if (!this.cache) return null;
+    try {
+      const entry = this.cache.getRawEntry(key);
+      return entry ? entry.data : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Gets all cache keys for debugging purposes (only works with in-memory cache).
+   * @returns Array of cache keys.
+   * @throws Error if using Redis cache.
+   */
+  getCacheKeys(): string[] {
+    if (!this.cache) return [];
+    try {
+      return this.cache.getAllKeys();
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Disconnects the Redis client if using Redis cache.
+   * @returns A promise that resolves when disconnected.
+   */
+  async disconnect(): Promise<void> {
+    if (this.cache) {
+      await this.cache.disconnect();
+    }
   }
 }

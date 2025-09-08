@@ -29,8 +29,8 @@
   "author": "Noah",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
   "peerDependencies": {
     "@types/node": ">=16.0.0"
@@ -41,5 +41,8 @@
   "files": [
     "dist/**/*",
     "README.md"
-  ]
+  ],
+  "dependencies": {
+    "redis": "^5.8.2"
+  }
 }

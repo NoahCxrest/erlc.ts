@@ -1,5 +1,5 @@
-import { Player, JoinLog, KillLog, CommandLog, ModCall } from './types.js';
 import { PRCClient } from './client.js';
+import { CommandLog, JoinLog, KillLog, ModCall, Player } from './types.js';
 
 
 /**
@@ -272,6 +272,12 @@ export class PRCHelpers {
         return `${hours}h ${minutes}m`;
     }
 
+    /**
+     * Kicks all players from a specific team.
+     * @param team - The team name to kick players from.
+     * @param reason - Optional reason for kicking.
+     * @returns Array of player names that were kicked.
+     */
     async kickAllFromTeam(team: string, reason?: string): Promise<string[]> {
         const players = await this.getPlayersByTeam(team);
         const userIds = players
@@ -288,6 +294,10 @@ export class PRCHelpers {
         return players.map(player => player.Player);
     }
 
+    /**
+     * Sends a private message to all staff members.
+     * @param message - The message to send.
+     */
     async messageAllStaff(message: string): Promise<void> {
         const staff = await this.getStaff();
         const userIds = staff
@@ -299,6 +309,11 @@ export class PRCHelpers {
         }
     }
 
+    /**
+     * Gets server statistics for the last N hours.
+     * @param hours - Number of hours to look back (default: 24).
+     * @returns Object containing current and recent server stats.
+     */
     async getServerStats(hours = 24) {
         const cutoff = Date.now() / 1000 - (hours * 3600);
 

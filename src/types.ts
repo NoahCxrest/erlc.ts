@@ -1,11 +1,18 @@
+/**
+ * Configuration options for the PRCClient.
+ */
 export interface PRCClientOptions {
     serverKey?: string;
     globalKey?: string;
     baseURL?: string;
     cache?: boolean;
     cacheMaxAge?: number;
+    redisUrl?: string;
 }
 
+/**
+ * Information about the current rate limit status.
+ */
 export interface RateLimitInfo {
     bucket: string;
     limit: number;
@@ -13,12 +20,18 @@ export interface RateLimitInfo {
     reset: number;
 }
 
+/**
+ * Represents an error returned by the PRC API.
+ */
 export interface PRCError {
     code: number;
     message: string;
     retryAfter?: number;
 }
 
+/**
+ * Represents the current status of the server.
+ */
 export interface ServerStatus {
     Name: string;
     OwnerId: number;
@@ -30,6 +43,9 @@ export interface ServerStatus {
     TeamBalance: boolean;
 }
 
+/**
+ * Represents a player on the server.
+ */
 export interface Player {
     /**
      * Formatted as PlayerName:ID
@@ -43,6 +59,9 @@ export interface Player {
     Team: 'Police' | 'Jail' | 'Sheriff' | 'DOT' | 'Fire' | 'Civilian';
 }
 
+/**
+ * Represents a join or leave log entry.
+ */
 export interface JoinLog {
     Join: boolean;
     Timestamp: number;
@@ -52,6 +71,9 @@ export interface JoinLog {
     Player: string;
 }
 
+/**
+ * Represents a kill log entry.
+ */
 export interface KillLog {
     /**
      * Formatted as PlayerName:ID
@@ -64,6 +86,9 @@ export interface KillLog {
     Killer: string;
 }
 
+/**
+ * Represents a command log entry.
+ */
 export interface CommandLog {
     /**
      * Formatted as PlayerName:ID
@@ -73,6 +98,9 @@ export interface CommandLog {
     Command: string;
 }
 
+/**
+ * Represents a mod call entry.
+ */
 export interface ModCall {
     /**
      * Formatted as PlayerName:ID
@@ -86,27 +114,43 @@ export interface ModCall {
     Timestamp: number;
 }
 
+/**
+ * Represents a vehicle on the server.
+ */
 export interface Vehicle {
     Texture: string;
     Name: string;
     Owner: string;
 }
 
+/**
+ * A record of banned players, keyed by player ID.
+ */
 export interface ServerBans {
     [playerId: string]: string;
 }
 
+/**
+ * Represents the staff members of the server.
+ */
 export interface ServerStaff {
     CoOwners: number[];
     Admins: Record<string, string>;
     Mods: Record<string, string>;
 }
 
+/**
+ * The response structure for API calls.
+ * @template T The type of the data returned.
+ */
 export interface APIResponse<T = any> {
     data: T;
     rateLimit?: RateLimitInfo;
 }
 
+/**
+ * Enumeration of error codes returned by the PRC API.
+ */
 export enum ErrorCode {
     UNKNOWN = 0,
     ROBLOX_ERROR = 1001,
