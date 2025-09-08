@@ -65,6 +65,92 @@ export class PRCClient {
   }
 
   /**
+   * Retrieves cached data if available.
+   * @template T
+   * @param {string} cacheKey - The cache key.
+   * @returns {Promise<T | null>} The cached data or null.
+   */
+  private async getCachedData<T>(cacheKey: string): Promise<T | null> {
+    if (this.cache) {
+      return await this.cache.get<T>(cacheKey);
+    }
+    return null;
+  }
+
+  /**
+   * Sets data in the cache.
+   * @template T
+   * @param {string} cacheKey - The cache key.
+   * @param {T} data - The data to cache.
+   */
+  private async setCachedData<T>(cacheKey: string, data: T): Promise<void> {
+    if (this.cache) {
+      await this.cache.set(cacheKey, data);
+    }
+  }
+
+  /**
+   * Builds the fetch options for the request.
+   * @param {'GET' | 'POST'} method - HTTP method.
+   * @param {any} [body] - Request body.
+   * @returns {RequestInit} The fetch options.
+   */
+  private buildFetchOptions(method: 'GET' | 'POST', body?: any): RequestInit {
+    const fetchOptions: RequestInit = {
+      method,
+      headers: this.headers,
+    };
+    if (method !== 'GET' && body) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+    return fetchOptions;
+  }
+
+  /**
+   * Determines if the request should be retried based on the error.
+   * @param {any} errorBody - The error response body.
+   * @param {number} retryCount - Current retry count.
+   * @param {number} maxRetries - Maximum retries.
+   * @returns {Promise<boolean>} Whether to retry.
+   */
+  private async shouldRetry(errorBody: any, retryCount: number, maxRetries: number): Promise<boolean> {
+    if (
+      errorBody &&
+      (errorBody.code === 4001 || errorBody.errorCode === 4001) &&
+      retryCount < maxRetries
+    ) {
+      if (typeof errorBody.retry_after === 'number' && errorBody.retry_after > 0) {
+        await RateLimiter.waitForRetryAfter(errorBody.retry_after);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Parses the response data based on content type.
+   * @template T
+   * @param {Response} response - The fetch response.
+   * @returns {Promise<T>} The parsed data.
+   */
+  private async parseResponseData<T>(response: Response): Promise<T> {
+    const contentType = response.headers.get('content-type');
+    if (contentType?.includes('application/json')) {
+      return (await response.json()) as T;
+    }
+    return null as T;
+  }
+
+  /**
+   * Handles error responses by throwing an appropriate error.
+   * @param {Response} response - The fetch response.
+   * @param {any} errorBody - The error response body.
+   */
+  private handleErrorResponse(response: Response, errorBody: any): void {
+    throw PRCAPIError.fromResponse(response, errorBody);
+  }
+
+  /**
    * Makes an HTTP request to the API, handling caching, rate limiting, and retries.
    * @template T
    * @param {'GET' | 'POST'} method - HTTP method.
@@ -85,8 +171,8 @@ export class PRCClient {
     const cacheKey = `${method}:${endpoint}`;
     const MAX_RETRIES = 3;
 
-    if (cacheable && method === 'GET' && this.cache) {
-      const cachedData = await this.cache.get<T>(cacheKey);
+    if (cacheable && method === 'GET') {
+      const cachedData = await this.getCachedData<T>(cacheKey);
       if (cachedData !== null) {
         return { data: cachedData };
       }
@@ -94,13 +180,7 @@ export class PRCClient {
 
     let retryCount = 0;
     while (true) {
-      const fetchOptions: RequestInit = {
-        method,
-        headers: this.headers,
-      };
-      if (method !== 'GET' && body) {
-        fetchOptions.body = JSON.stringify(body);
-      }
+      const fetchOptions = this.buildFetchOptions(method, body);
       const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
@@ -108,31 +188,17 @@ export class PRCClient {
         try {
           errorBody = await response.json();
         } catch { }
-        if (
-          errorBody &&
-          ((errorBody?.code === 4001 || errorBody?.errorCode === 4001)) &&
-          retryCount < MAX_RETRIES
-        ) {
-          if (typeof errorBody?.retry_after === 'number' && errorBody?.retry_after > 0) {
-            await RateLimiter.waitForRetryAfter(errorBody.retry_after);
-          }
+        if (await this.shouldRetry(errorBody, retryCount, MAX_RETRIES)) {
           retryCount++;
           continue;
         }
-        throw PRCAPIError.fromResponse(response, errorBody);
+        this.handleErrorResponse(response, errorBody);
       }
 
-      let data: T;
-      const contentType = response.headers.get('content-type');
+      const data = await this.parseResponseData<T>(response);
 
-      if (contentType?.includes('application/json')) {
-        data = (await response.json()) as T;
-      } else {
-        data = null as T;
-      }
-
-      if (cacheable && method === 'GET' && this.cache) {
-        await this.cache.set(cacheKey, data);
+      if (cacheable && method === 'GET') {
+        await this.setCachedData(cacheKey, data);
       }
 
       return { data };
