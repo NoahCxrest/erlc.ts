@@ -49,7 +49,7 @@ await client.executeCommand(':h Check out Melonly!');
 ## ✨ Features
 
 * ✅ 100% TypeScript support
-* ⚡ Built-in in-memory caching
+* ⚡ Built-in caching (in-memory or Redis)
 * 🚦 Automatic rate limit handling
 * 🔒 Fully typed API responses
 * 🧩 100% API coverage
@@ -95,18 +95,27 @@ try {
 
 ### Cache Control
 
-The client caches GET requests by default.
+The client caches GET requests by default. Supports both in-memory and Redis caching.
 
 * ⏱ Default: **30s**
 * ❌ Disable: `cache: false`
 * ⏳ Custom: `cacheMaxAge` (ms)
+* 🔴 Redis: `redisUrl` (e.g., `redis://localhost:6379`)
 * 🧹 Clear manually: `client.clearCache()`
 * 🔍 Inspect: `client.getCacheSize()`
 
 ```ts
+// In-memory caching
 const client = new PRCClient({
   serverKey: 'your-server-key',
-  cacheMaxAge: 120_000, // 2 minutes
+  cacheMaxAge: 120_000, // 2 mins
+});
+
+// Redis caching
+const redisClient = new PRCClient({
+  serverKey: 'your-server-key',
+  redisUrl: 'redis://localhost:6379',
+  cacheMaxAge: 300_000, // 5 mins
 });
 
 client.clearCache();
