@@ -23,15 +23,17 @@ export class Cache {
     private defaultMaxAge: number;
     private redisClient?: RedisClientType;
     private isRedis: boolean;
+    private redisKeyPrefix?: string | undefined;
 
     /**
      * Creates a new Cache instance.
      * @param defaultMaxAge - Default maximum age for cache entries in milliseconds (default: 30000).
      * @param redisUrl - Optional Redis URL for Redis-based caching.
      */
-    constructor(defaultMaxAge = 30000, redisUrl?: string) { // 30 seconds
+    constructor(defaultMaxAge = 30000, redisUrl?: string, redisKeyPrefix?: string) { // 30 seconds
         this.defaultMaxAge = defaultMaxAge;
         this.isRedis = !!redisUrl;
+        this.redisKeyPrefix = redisKeyPrefix;
         if (this.isRedis && redisUrl) {
             this.redisClient = createClient({ url: redisUrl });
             this.redisClient.connect().catch(console.error);
@@ -41,11 +43,12 @@ export class Cache {
     /**
      * Sets a value in the cache.
      * @template T The type of the data.
-     * @param key - The cache key.
+     * @param rawKey - The cache key.
      * @param data - The data to cache.
      * @param maxAge - Optional maximum age for this entry in milliseconds.
      */
-    async set<T>(key: string, data: T, maxAge?: number): Promise<void> {
+    async set<T>(rawKey: string, data: T, maxAge?: number): Promise<void> {
+        const key = this.redisKeyPrefix ? `${this.redisKeyPrefix}:${rawKey}` : rawKey;
         const age = maxAge ?? this.defaultMaxAge;
         if (this.isRedis && this.redisClient) {
             await this.redisClient.setEx(key, Math.ceil(age / 1000), JSON.stringify(data));
@@ -64,10 +67,11 @@ export class Cache {
     /**
      * Gets a value from the cache.
      * @template T The type of the data.
-     * @param key - The cache key.
+     * @param rawKey - The cache key.
      * @returns The cached data or null if not found or expired.
      */
-    async get<T>(key: string): Promise<T | null> {
+    async get<T>(rawKey: string): Promise<T | null> {
+        const key = this.redisKeyPrefix ? `${this.redisKeyPrefix}:${rawKey}` : rawKey;
         if (this.isRedis && this.redisClient) {
             const data = await this.redisClient.get(key);
             return data ? JSON.parse(data) : null;
@@ -91,20 +95,21 @@ export class Cache {
      * @returns True if the key exists and is not expired.
      */
     async has(key: string): Promise<boolean> {
-        return (await this.get(key)) !== null;
+        return (await this.get(this.redisKeyPrefix ? `${this.redisKeyPrefix}:${key}` : key)) !== null;
     }
 
     /**
      * Deletes a key from the cache.
-     * @param key - The cache key.
+     * @param rawKey - The cache key.
      * @returns True if the key was deleted.
      */
-    async delete(key: string): Promise<boolean> {
+    async delete(rawKey: string): Promise<boolean> {
+        const key = this.redisKeyPrefix ? `${this.redisKeyPrefix}:${rawKey}` : rawKey
         if (this.isRedis && this.redisClient) {
-            const result = await this.redisClient.del(key);
+            const result = await this.redisClient.del(rawKey);
             return result > 0;
         } else {
-            return this.cache.delete(key);
+            return this.cache.delete(rawKey);
         }
     }
 
@@ -143,7 +148,7 @@ export class Cache {
         if (this.isRedis) {
             throw new Error('Cannot get raw entry from Redis cache');
         }
-        return this.cache.get(key) || null;
+        return this.cache.get(this.redisKeyPrefix ? `${this.redisKeyPrefix}:${key}` : key) || null;
     }
 
         /**
