@@ -40,7 +40,7 @@ export class PRCClient {
     this.baseURL = options.baseURL || 'https://api.policeroleplay.community/v1';
     this.serverKey = options.serverKey;
     this.globalKey = options.globalKey;
-    this.cache = options.cache !== false ? new Cache(options.cacheMaxAge, options.redisUrl) : null;
+    this.cache = options.cache !== false ? new Cache(options.cacheMaxAge, options.redisUrl, options.redisKeyPrefix) : null;
     this.headers = this.buildHeaders();
   }
 
@@ -174,17 +174,16 @@ export class PRCClient {
   ): Promise<APIResponse<T>> {
 
     const url = `${this.baseURL}${endpoint}`;
-    const cacheKey = `${method}:${endpoint}`;
+    const cacheKey = `${endpoint}`;
     const MAX_RETRIES = 3;
 
     // Determine if caching should be used for this request
-    const shouldCache = cacheOverride !== undefined ? cacheOverride : cacheable;
+    const shouldCache = method === 'GET' && (cacheOverride !== undefined ? cacheOverride : cacheable);
 
-    if (shouldCache && method === 'GET') {
+    if (shouldCache) {
       const cachedData = await this.getCachedData<T>(cacheKey);
-      if (cachedData !== null) {
+      if (cachedData !== null) 
         return { data: cachedData };
-      }
     }
 
     let retryCount = 0;
@@ -206,9 +205,8 @@ export class PRCClient {
 
       const data = await this.parseResponseData<T>(response);
 
-      if (shouldCache && method === 'GET') {
+      if (shouldCache) 
         await this.setCachedData(cacheKey, data, cacheMaxAge);
-      }
 
       return { data };
     }

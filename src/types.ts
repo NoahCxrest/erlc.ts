@@ -8,6 +8,7 @@ export interface PRCClientOptions {
     cache?: boolean;
     cacheMaxAge?: number;
     redisUrl?: string;
+    redisKeyPrefix?: string;
 }
 
 /**
